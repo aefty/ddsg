@@ -7,6 +7,8 @@ git pull
 sleep $sleepTime
 END=$(date +%s.%N)
 DIFF=$(echo "$END - $START" | bc)
-echo $DIFF
+RATE= $(1/($ echo $DIFF  ) )
+
+echo $RATE
 
 source refersh.sh
