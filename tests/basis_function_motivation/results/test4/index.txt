@@ -1,0 +1,10 @@
+==================================
+dim: 10
+HDMRmaxOrder: 4
+HDMRsampleSize: 0
+HDMRcutOff: 0.0001
+SGmaxLevel: 4
+SGgridType: 1
+SGcutOff: 0.0001
+PointCout: 1000
+==================================

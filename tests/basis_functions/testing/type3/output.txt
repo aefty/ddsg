@@ -1,0 +1,28 @@
+Basis Function Type : 3
+Now, it is in Level: 1
+The active number of points are: 4
+Parallel Calculation using 5.00679e-06
+Surplus  Calculation using 5.29289e-05
+Now, it is in Level: 2
+The active number of points are: 12
+Parallel Calculation using 1.90735e-06
+Surplus  Calculation using 4.88758e-05
+Now, it is in Level: 3
+The active number of points are: 32
+Parallel Calculation using 2.86102e-06
+Surplus  Calculation using 0.000123978
+Now, it is in Level: 4
+The active number of points are: 80
+Parallel Calculation using 1.09673e-05
+Surplus  Calculation using 0.000436068
+Now, it is in Level: 5
+The active number of points are: 192
+Parallel Calculation using 1.90735e-05
+Surplus  Calculation using 0.00150895
+Construct the adaptive sparse grid use ( 0.01s)
+The number of the grid is :321
+The depth  of the grid is :5
+
+The Maximum   error    is: 8.420040e-01
+The relative  L2 error is: 1.145934e-01
+

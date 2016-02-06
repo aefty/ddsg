@@ -1,0 +1,99 @@
+
+#########################################################################################
+##This is an example makefile to compile the software which are listed on this webpage. #
+#########################################################################################
+
+##### Compiler, tools and options.
+##### You may change the compliter available on your platform
+CC	= mpicxx  #g++
+CFLAGS	= -w -O2 -std=c++11
+
+
+####################################################################################################################
+## Part or all of the following libraries are needed according to which software you are going to use.          ####
+## You need to first download and install the required libraries.                                               ####
+## Then only thing you need to do is to change library path to where you install the libraries                  ####
+####################################################################################################################
+
+##### This is the path to MPICH library ########
+##### This can be downloaded at http://www.mcs.anl.gov/research/projects/mpich2/ ###
+
+#MPICHPATH = /opt/mpich-ch_p4-gcc-1.2.7
+
+#Simon
+#MPICHPATH = /usr/lib/mpich/lib
+#MPICHPATH = /usr/lib/openmpi/lib
+
+#### Include your own library here############
+
+
+SPARSEGRIDLIB = ../../core/SparseGrid
+SPARSEGRIDLIBINCPATH = -I$(SPARSEGRIDLIB)/include
+SPARSEGRIDLIBPATH = -L$(SPARSEGRIDLIB)/lib -lsparsegrid
+
+
+#######################################################################################################################
+### The following are the paths to include the include and library files                                          #####
+### There is no need to modify them                                                                               #####
+#######################################################################################################################
+
+# MPICHINCPATH     = -I$(MPICHPATH)/include
+# MPICHLIBPATH     = -L$(MPICHPATH)/lib -lmpich
+
+
+INCPATH	= $(SPARSEGRIDLIBINCPATH) $(MPICHINCPATH)
+
+#Simon Flags
+#(missing lg2c compared to origLIBPATH,
+#I put-lgfortran as suggested. You may think of it as, libg2c is to g77 as libc is to gcc
+#http://stackoverflow.com/questions/2406581/what-is-libg2c-library)
+#http://stackoverflow.com/questions/4303482/cannot-find-lg2c
+#Note that as of the GCC 4.x series, g77 has been discontinued, replaced by gfortran,
+#which produces programs that do not require an extra libg2c runtime library;
+
+LIBPATH = $(SPARSEGRIDLIBPATH)  $(MPICHLIBPATH) -lpthread -lstdc++   -lm -ldl
+#orig
+#LIBPATH = $(SPARSEGRIDLIBPATH)  $(MPICHLIBPATH) -lpthread -lstdc++ -lnsl -laio -lrt -lg2c -lm -lgcc_s -ldl
+
+
+#########################################################################################################################
+
+#### add your object files here############
+
+OBJS = main.o
+
+
+
+####### Targets.
+
+TARGETS	= main
+
+##### Implicit rules.
+
+.SUFFIXES: .cpp .cxx .cc .C .c
+
+.cpp.o:
+	$(CC) -c $(CFLAGS) $(INCPATH) $(INCFLAG)  $<
+
+.cxx.o:
+	$(CC) -c $(CFLAGS) $(INCPATH) $(INCFLAG)  $<
+
+.cc.o:
+	$(CC) -c $(CFLAGS) $(INCPATH) $(INCFLAG)  $<
+
+.C.o:
+	$(CC) -c $(CFLAGS) $(INCPATH) $(INCFLAG)  $<
+
+.c.o:
+	$(CC) -c $(CFLAGS) $(INCPATH) $(INCFLAG)  $<
+
+##### Build rules.
+
+##### After main, you need to include your own files to be compiled
+
+main:	$(OBJS)
+	$(CC) -O -o $@ *.o $(LIBPATH)
+
+clean:
+	rm -f *.o main testRead core
+
