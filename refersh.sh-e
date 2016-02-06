@@ -1,6 +1,6 @@
 #!/bin/sh
 
-SLEEP=2
+SLEEP=3
 
 
 FIXED_HOURLY_RATE=1000
