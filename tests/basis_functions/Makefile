@@ -27,7 +27,7 @@ CFLAGS	= -w -O2 -std=c++11
 #### Include your own library here############
 
 
-SPARSEGRIDLIB = ../../core/SparseGrid
+SPARSEGRIDLIB = ../../srg/asg
 SPARSEGRIDLIBINCPATH = -I$(SPARSEGRIDLIB)/include
 SPARSEGRIDLIBPATH = -L$(SPARSEGRIDLIB)/lib -lsparsegrid
 

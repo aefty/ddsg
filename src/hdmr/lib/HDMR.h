@@ -89,8 +89,6 @@ class HDMR {
 	HDMR(int verbose = 0);
 	~HDMR();
 
-
-
 	/**
 	* [HDMR::write Decompose the problem into a series of surplus files]
 	*/
@@ -180,7 +178,7 @@ class HDMR {
 	* @return   [Count of unique combinations Note! (1,2)==(2,1)]
 	*/
 	unsigned int nCk(int n, int k);
-    
+
 	double l2norm(double* x, int size);
 
 	void cleanUp();
