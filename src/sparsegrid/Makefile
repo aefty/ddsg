@@ -3,7 +3,7 @@ ALL: sparsegrid_lib
 ########################################################################################
 # Specify options to compile and create libraries
 ########################################################################################
-CC         = g++
+CC         = mpicxx
 COPTFLAGS  = -O -w
 OMAKE      = make
 RM         = /bin/rm
@@ -13,14 +13,14 @@ LIB_SUFFIX = a
 RANLIB     = ranlib
 #MPICH_DIR  = /opt/mpich-ch_p4-gcc-1.2.7
 #MPICH_DIR  = /usr/lib/mpich2/lib
-MPICHPATH = /usr/lib/openmpi/lib
+#MPICHPATH = /usr/lib/openmpi/lib
 
 ########################################################################################
 # compile the source files and create the libraries
 ########################################################################################
 
 LIB_NAME       = libsparsegrid.$(LIB_SUFFIX)
-MAKE_OPTIONS_G = CC="mpicxx" COPTFLAGS="$(COPTFLAGS) " AR="$(AR)" AR_FLAGS="$(AR_FLAGS)" RM="$(RM)"
+MAKE_OPTIONS_G = CC="$(CC)" COPTFLAGS="$(COPTFLAGS) " AR="$(AR)" AR_FLAGS="$(AR_FLAGS)" RM="$(RM)"
 MAKE_OPTIONS         =   $(MAKE_OPTIONS_G) LIBNAME="$(LIB_NAME)"
 
 ########################################################################################
