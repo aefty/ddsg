@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <array>
 #include <string>
+#include <cstring>
 #include <algorithm>
 
 using std::cout;
