@@ -25,7 +25,6 @@ class Post {
 
   virtual double IndextoCoordinate(int i, int j);
 
-
   //#AE: function that will call other basis functions based on gridType
   virtual double BasisFunction(double x, int i  , int j);
 
@@ -40,7 +39,7 @@ class Post {
 
 
   virtual double LinearBasisVolumeIntegral(int level);
-  virtual void   PlotSparseGrid(char *filename = "grid.plt");
+  virtual void   PlotSparseGrid(char* filename = "grid.plt");
 
   //! \param Number of dimensions
   int dim ;

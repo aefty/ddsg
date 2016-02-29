@@ -11,7 +11,6 @@ Post::Post() {
 	MPI_Comm_size(mpiCOMM, &size);
 }
 
-
 void Post::LoadData(char* filename) {
 	int i, j;
 
@@ -249,7 +248,6 @@ void Post::Interpolate(double* x, double* value) {
 	}
 
 	Interpolate(px, value);
-
 }
 
 void Post::Integrate(double* value) {

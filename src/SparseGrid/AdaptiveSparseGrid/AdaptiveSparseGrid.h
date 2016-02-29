@@ -33,7 +33,8 @@ class AdaptiveSparseGrid {
 	//! defines three BlockAllocators to allocate the memory for AdaptiveData and Multi-index
 	BlockAllocator <AdaptiveData> AdaptiveDataAllocator;
 	BlockAllocator <AdaptiveNodeData> AdaptiveNodeDataAllocator;
-	BlockAllocator <AdaptiveARRAY<int> > AdaptiveCoordAllocator;
+	BlockAllocator <
+	AdaptiveARRAY<int> > AdaptiveCoordAllocator;
 
 	//! set is a associative container to store all of the active points during adaptive refinment.
 	//! The use of set is to ensure a unique interpolation point is genrated.
@@ -53,9 +54,9 @@ class AdaptiveSparseGrid {
 	virtual void   SetGridType(int type) {gridType = type;};
 
 	//Subroutines for interpolation
-	virtual void   SpInterpolate(AdaptiveARRAY<double> *x, double* value);
+	virtual void   SpInterpolate(AdaptiveARRAY<double>* x, double* value);
 	virtual void   SpInterpolate(double* x, double* value);
-	virtual void   SpInterpolateLevel(Matrix1<double>& px, double *temp);
+	virtual void   SpInterpolateLevel(Matrix1<double>& px, double* temp);
 
 	//!Subroutines for linear and polynomial basis functions
 	virtual double BasisFunction(double x, int i, int j );
@@ -68,28 +69,28 @@ class AdaptiveSparseGrid {
 	virtual double PolyBasis(double x, int i, int j);
 
 
-	virtual void   Refine( AdaptiveARRAY<int> *, AdaptiveARRAY<int> *);
+	virtual void   Refine( AdaptiveARRAY<int>*, AdaptiveARRAY<int>*);
 
-	virtual void   FindOrInsertActiveIndex(AdaptiveARRAY<int> *i, AdaptiveARRAY<int> *j1, AdaptiveARRAY<int> *j2 );
+	virtual void   FindOrInsertActiveIndex(AdaptiveARRAY<int>* i, AdaptiveARRAY<int>* j1, AdaptiveARRAY<int>* j2 );
 
 	//!Subroutines for integration
 	virtual void   SpIntegrate(double* value);
 	virtual double LinearBasisVolumeIntegral(int level);
-	virtual void   ComputeMeanAndVar(char *filename = "result.plt");
-	virtual void   StoreMeanAndVar(double* value, char *filename) {};
+	virtual void   ComputeMeanAndVar(char* filename = "result.plt");
+	virtual void   StoreMeanAndVar(double* value, char* filename) {};
 
 
-	virtual void   PlotSparseGrid(char *filename = "grid.plt");
+	virtual void   PlotSparseGrid(char* filename = "grid.plt");
 
-	virtual void   StoreSurplus(AdaptiveARRAY<int>& index, char *filename = "surplus.plt" );
+	virtual void   StoreSurplus(AdaptiveARRAY<int>& index, char* filename = "surplus.plt" );
 
 	virtual void   Cleanup();
 
 	//! Function to define when to refine the points; You may overload this function.
-	virtual int    IsRefine(double* value, AdaptiveARRAY<int> *, AdaptiveARRAY<int> *);
+	virtual int    IsRefine(double* value, AdaptiveARRAY<int>*, AdaptiveARRAY<int>*);
 
 	//! Functions you must overload
-	virtual void   EvaluateFunctionAtThisPoint( AdaptiveARRAY<double> *x) = 0;
+	virtual void   EvaluateFunctionAtThisPoint( AdaptiveARRAY<double>* x) = 0;
 
 
 	//! Set the actions before and after storing the hierarchical surplused
@@ -101,8 +102,8 @@ class AdaptiveSparseGrid {
 	//!Computing the intergral of the polynomial basis function using Gauss-Legendre quadrature.
 	virtual void   calculate_wts_and_quad_pts(const double low, const double up);
 	virtual double PolynomialVolumeIntegral(int i, int j);
-	double *wts; ///< Weights for numerical integration  (1D polynomial)
-	double *abs; ///< Abscissa for numerical integration (1D polynomial)
+	double* wts; ///< Weights for numerical integration  (1D polynomial)
+	double* abs; ///< Abscissa for numerical integration (1D polynomial)
 	int no_quad_pts;
 
 	virtual int NumberOfPoints(); ///< Number of total collocation points
@@ -116,7 +117,6 @@ class AdaptiveSparseGrid {
 	virtual double IndextoCoordinate(int i, int j);
 
 	virtual int    CoordinateToIndex(double x);
-
 
 	Array<double> currentvalue;   ///< integration value
 
@@ -156,7 +156,7 @@ class AdaptiveSparseGrid {
 	int gridType;
 
 	//! Array to store surplus
-	double *surplus;
+	double* surplus;
 
 	//! \param restart
 	int restart;

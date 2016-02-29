@@ -11,10 +11,6 @@ AdaptiveSparseGrid::AdaptiveSparseGrid(int d, int L, double eps, int gridType_ )
 	epsilon = eps;
 	//type = type_;
 
-	MPI_Comm_rank(mpiCOMM, &rank);
-	MPI_Comm_size(mpiCOMM, &size);
-
-
 	surplus = NULL;
 
 	//#AE: type_

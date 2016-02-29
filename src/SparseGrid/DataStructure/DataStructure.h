@@ -19,15 +19,14 @@ using std::string;
 //! Class of array data structure
 template<class Data>
 class Array {
-  public: Array() {
+  public:
+    Array() {
         n = 0;
         pData = NULL;
-    }
-    
+    };
     virtual ~Array() {
         cleanup();
-    }
-    
+    };
     virtual void cleanup() {
         if (pData) {
             delete[] pData;
@@ -36,7 +35,6 @@ class Array {
             n = 0;
         }
     }
-    
     Array& operator=(const Array& A) {
         redim(A.n );
         int i;
@@ -51,25 +49,21 @@ class Array {
         this->n = n_;
         pData = new Data[n];
     }
-    
     Data& operator () (int i) {
         return pData[i - 1];
     }
-    
     virtual void fill(Data data) {
         int i;
         for (i = 0; i < n; i++) {
             pData[i] = data;
         }
     }
-    
     void add(Array<Data>& deta, Data ratio_) {
         int i;
         for (i = 0; i < n; i++) {
             pData[i] += deta.pData[i] * ratio_;
         }
     }
-    
     Data norm() {
         Data sum = 0;
         int i;

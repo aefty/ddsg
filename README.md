@@ -1,2 +1,2 @@
 # hdmr
-HDMR++
+HDMR + Sparse Grids

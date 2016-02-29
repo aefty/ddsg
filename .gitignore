@@ -30,3 +30,5 @@
 # Data files
 *.csv
 *.data
+*index
+*log
