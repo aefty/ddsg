@@ -20,7 +20,7 @@ RANLIB     = ranlib
 ########################################################################################
 
 LIB_NAME       = libsparsegrid.$(LIB_SUFFIX)
-MAKE_OPTIONS_G = CC="$(CC)" COPTFLAGS="$(COPTFLAGS) " AR="$(AR)" AR_FLAGS="$(AR_FLAGS)" RM="$(RM)"
+MAKE_OPTIONS_G = CC="$(CC)" COPTFLAGS="$(COPTFLAGS)" AR="$(AR)" AR_FLAGS="$(AR_FLAGS)" RM="$(RM)"
 MAKE_OPTIONS         =   $(MAKE_OPTIONS_G) LIBNAME="$(LIB_NAME)"
 
 ########################################################################################
