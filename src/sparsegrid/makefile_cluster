@@ -3,7 +3,7 @@ ALL: sparsegrid_lib
 ########################################################################################
 # Specify options to compile and create libraries
 ########################################################################################
-CC         = g++
+CC         = CC
 COPTFLAGS  = -O -w
 OMAKE      = make
 RM         = /bin/rm
