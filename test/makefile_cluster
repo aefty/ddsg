@@ -5,7 +5,7 @@
 
 ##### Compiler, tools and options.
 ##### You may change the compliter available on your platform
-CC	= mpicxx
+CC	= CC
 CFLAGS	= -w -O2 -std=c++11
 
 
