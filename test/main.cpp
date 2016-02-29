@@ -29,13 +29,11 @@ int main(int argc, char* argv[]) {
 	int processPerGroup = 0;
 	string method = "";
 
-
 	// Input form command line
 	method = argv[1];
 	processPerGroup = atoi(argv[2]);
 	dim = atoi(argv[3]);
 	SGmaxLevel = atoi(argv[4]);
-
 
 	int size, rank;
 	MPI_Comm_size(MPI_COMM_WORLD, &size);

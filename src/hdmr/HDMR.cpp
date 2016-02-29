@@ -934,7 +934,7 @@ void HDMR::debug( string heading, int showRunTime, int showComputePool, int show
 	if (computePool.grank == 0) {cout << hline;};
 
 	MPI_Barrier(MPI_COMM_WORLD);
-	sleep( (computePool.nodeRank * computePool.nodeSize + computePool.rank) / 4.0);
+	sleep( (computePool.nodeRank * computePool.nodeSize + computePool.rank) / computePool.gsize);
 
 	cout << "\n " + heading + " - State Dump [ Global Rank: " << computePool.grank << " of " << computePool.gsize << " ]\n";
 	cout << "================================================\n";
