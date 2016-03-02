@@ -23,6 +23,17 @@ using std::fill;
 
 double PI =  4 * atan(1.0);
 
+
+
+// Sum of squares
+void f_is_x(double* x ,  int dim, double* val) {
+	val[0] = 0.0;
+	for (int i = 0; i < dim; ++i) {
+		val[0] = x[i];
+	};
+}
+
+
 // Sum of squares
 void f0(double* x ,  int dim, double* val) {
 	val[0] = 0.0;
@@ -127,6 +138,31 @@ void f6(double* x ,  int dim, double* val ) {
 }
 
 
+void generateMesh( vector<double>& alphabet, int maxNumberOfpoints) {
+
+	int numberOfpoints = 0;
+
+	cout << "alphabet : ";
+	for (int i = 0; i < alphabet.size(); ++i) {
+		alphabet[i] = double (i) / double(alphabet.size());
+		cout << alphabet[i] << " ";
+	}
+	cout << endl;
+
+
+	do {
+
+		cout  << numberOfpoints << " - ";
+		for (int i = 0; i < alphabet.size(); ++i) {
+			cout << alphabet[i] << " ";
+		}
+
+		cout << endl;
+		numberOfpoints ++;
+	} while ( next_permutation(alphabet.begin(), alphabet.end()) &&  numberOfpoints < maxNumberOfpoints );
+
+}
+
 void generateRandom(double* x, int dim, int numberOfpoints, int SEED = 100) {
 
 	std::default_random_engine rd (SEED);
@@ -156,7 +192,7 @@ double checkError(
 	double exactVal[dof];
 
 	if (verbose_percision > 0) {
-		cout << "Average Error Measure" << endl;
+		cout << "Average Error Measure f(X)=[Estimated][Exact][asb(Estiamte-Exact/Exact)]" << endl;
 		cout << "=======================" << endl;
 		std::cout.precision(verbose_percision);
 		std::cout.setf( std::ios::fixed, std:: ios::floatfield );
@@ -175,7 +211,7 @@ double checkError(
 		problemFunc(x + i * dim, dim, exactVal);
 
 		for (int j = 0; j < dof; ++j) {
-			errorVec[j] += fabs( fval[i * dof + j] - exactVal[j] ) / fabs(exactVal[j])  ;
+			errorVec[j] += fabs( (fval[i * dof + j] - exactVal[j] ) / exactVal[j] );
 		}
 
 		if (verbose_percision > 0) {
@@ -193,7 +229,7 @@ double checkError(
 
 			cout << "[" << fabs( fval[i * dof + 0] - exactVal[0] ) / fabs(exactVal[0]);
 			for (int j = 1; j < dof; ++j) {
-				cout << " "  << fabs( fval[i * dof + j] - exactVal[j] ) / fabs(exactVal[j]);
+				cout << " "  << fabs( (fval[i * dof + j] - exactVal[j] ) / exactVal[j] );
 			}
 			cout << "] " << endl;
 		}

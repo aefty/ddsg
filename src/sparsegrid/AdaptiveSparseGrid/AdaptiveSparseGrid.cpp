@@ -634,14 +634,11 @@ double AdaptiveSparseGrid::IndextoCoordinate(int i, int j ) {
 			break;
 
 		case 3:
-			//#AE: Change in the slope of the line
-			m = (1 << (i)) + 1;
-			return (j - 1.0) / (m - 1) ;
+			return (j - 1.0) / (m - 1);
 			break;
-
 		case 4:
-			m = (1 << (i)) + 1;
-			return (j - 1.0) / (m - 1) ;
+			//m = (1 << (i)) + 1;
+			return (j - 1) / (m - 1.0) ;
 			break;
 
 		//#AE: throw error when grid type not defined
@@ -680,20 +677,28 @@ double AdaptiveSparseGrid::BasisFunction(double x, int i, int j) {
 	//#AE: Select basis function based gridType
 	switch (gridType) {
 		case 1:
+			//		cout << "LinearBasis ";
+			//		cout << x << "," << i << "," << j << endl;
 			return LinearBasis(x, i, j);
 			break;
 
 		case 2:
+			//cout << "LagrangePoly";
 			return LagrangePoly(x, i, j);
 			break;
 
 		case 3:
+			//		cout << "FlipUpBasis ";
+			//		cout << x << "," << i << "," << j << endl;
 			return FlipUpBasis(x, i, j);
 			break;
 
 		case 4: // Basis
+			//cout << "PolyBasis";
+			//		cout << x << "," << i << "," << j << endl;
 			return PolyBasis(x, i, j);
 			break;
+
 
 		//#AE: throw error when grid type not defined
 		default:
@@ -725,38 +730,56 @@ double AdaptiveSparseGrid::LinearBasis(double x, int i, int j) {
 double AdaptiveSparseGrid::PolyBasis(double x, int i, int j) {
 
 	if (i < 3) {
-		return FlipUpBasis(x, i, j);
+		return LinearBasis(x, i, j);
 	} else {
-		double xp, x1, x2, temp;
-		double m = pow(2.0, i - 1);
 
-		// Start or end
-		if (j == 2 && x <= 0.5 ) {
-			x1 = 1. / m;
-			x2 = 1.0 - x1;
-			xp = 0.5;
-			//temp = -i * (x - x1) * (x - x2) / ((xp - x1) * (xp - x2));
-			temp = (2.0) / (x1 - x1 * x1) * (x - x1) * (x - x2);
-		} else if (j == (1 << i) && x > 0.5) {
-			x1 = 1. / m;
-			x2 = 1.0 - x1;
-			xp = 0.5;
-			//temp = -i * (x - x1) * (x - x2) / ((xp - x1) * (xp - x2));
-			temp = (2.0) / (x1 - x1 * x1) * (x - x1) * (x - x2);
-		} else {
-			xp = IndextoCoordinate(i, j); // ith index / m + 0.5*m  (ith index is not 2^i)
-			x1 = xp - 0.5 / m;
-			x2 = xp + 0.5 / m;
-			temp = (x - x1) * (x - x2) / ((xp - x1) * (xp - x2));
-		}
-
-		//cout << "(x-" << x1 << ")(x-" << x2 << ")/(" << xp << "-" << x1 << ")(" << xp << "-" << x2 << ")" << " ... " << IndextoCoordinate(i, j) << endl;
+		double m = pow(2.0, (i - 1));
+		double xp = IndextoCoordinate(i, j);
+		double x1 = xp - 0.5 / m;
+		double x2 = xp + 0.5 / m;
+		double temp = (x - x1) * (x - x2) / ((xp - x1) * (xp - x2));
 
 		if (temp > 0) {
 			return temp;
 		} else {
 			return 0.0;
 		}
+
+		/*
+				double x1, x2, temp;
+
+				m = pow(2.0, i - 1);
+
+				// Start or end
+				if (j == 2 && x <= 0.5 ) {
+					x1 = 1. / m;
+					x2 = 1.0 - x1;
+					xp = 0.5;
+					//temp = -i * (x - x1) * (x - x2) / ((xp - x1) * (xp - x2));
+					temp = (2.0) / (x1 - x1 * x1) * (x - x1) * (x - x2);
+				} else if (j == (1 << i) && x > 0.5) {
+					x1 = 1. / m;
+					x2 = 1.0 - x1;
+					xp = 0.5;
+					//temp = -i * (x - x1) * (x - x2) / ((xp - x1) * (xp - x2));
+					temp = (2.0) / (x1 - x1 * x1) * (x - x1) * (x - x2);
+				} else {
+					xp = IndextoCoordinate(i, j); // ith index / m + 0.5*m  (ith index is not 2^i)
+					x1 = xp - 0.5 / m;
+					x2 = xp + 0.5 / m;
+					temp = (x - x1) * (x - x2) / ((xp - x1) * (xp - x2));
+				}
+
+				//cout << "(x-" << x1 << ")(x-" << x2 << ")/(" << xp << "-" << x1 << ")(" << xp << "-" << x2 << ")" << " ... " << IndextoCoordinate(i, j) << endl;
+
+				if (temp > 0) {
+					return temp;
+				} else {
+					return 0.0;
+				}
+			}
+
+		*/
 	}
 }
 
@@ -771,28 +794,19 @@ double AdaptiveSparseGrid::PolyBasis(double x, int i, int j) {
  */
 double AdaptiveSparseGrid::FlipUpBasis(double x, int i, int j) {
 
-	if (  i == 1 ) {
-		return 1.0;
+	double xp, m;
+	if (  i < 3 ) {
+		return LinearBasis(x, i, j);
 	} else {
-		//Position marker - 0:middle, 1:start, 2:end;
-		int pos = 1 * ( (j == 2) || (i == 2 && j == 1) ) + 2 * ( (j == 1 << (i)) || (i == 2 && j == 3) );
-		double xp = IndextoCoordinate(i, j);
-		double m = pow(2.0, i);
+		double m = pow(2.0, i - 1);
+		double xp = IndextoCoordinate(i, j );
 
-		if ( fabs( x - xp ) > (1.0 / m)) {
-			return 0.0;
-
+		if ( x <= (1.0 / m) && xp == 1. / m)  {
+			return (-1.0 * m * x + 2.0);
+		} else if ( x >= (1.0 - 1.0 / m )  && xp == (1.0 - 1. / m) )  {
+			return (1.0 * m * x + (2.0 - m));
 		} else {
-
-			if (pos == 1) {               // Start
-				return (1.0 - m * (x - xp) );
-
-			} else if (pos == 2) {        // End
-				return (m * (x - xp) + 1 );
-
-			} else {                      // Middle
-				return (1.0 - m * fabs(x - xp));
-			}
+			return LinearBasis(x, i, j);
 		}
 	}
 }

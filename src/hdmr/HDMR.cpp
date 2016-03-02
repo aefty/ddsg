@@ -321,9 +321,7 @@ int HDMR::read(string folderName_) {
 			// Go thorugh job.active list
 			for (int i = 0; i < job.active[d].size(); ++i) {
 
-				// Round robin task allocation --- NOT DOING THIS
-				//	if (i % computePool.nodeSize ==  computePool.nodeRank) {
-
+				// NO prallelization here ! No Round robin task allocation
 				sgread[k]->read(folderName + vector_join(job.active[d][i], ".") + ".data");
 				k++;
 			}
@@ -980,7 +978,7 @@ void HDMR::debug( string heading, int showRunTime, int showComputePool, int show
 	if (showSG_HDMRparam && computePool.grank == 0) {
 		cout << "\n> SG param\n";
 		cout << "  Lmax: " << sgParam.maxLevel << endl;
-		cout << "  Type: " << sgParam.gridType << endl;
+		cout << "  Grid Type: " << sgParam.gridType << endl;
 		cout << "  CutOff/Epsilon: " << sgParam.cutOff << endl;
 
 

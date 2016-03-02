@@ -5,7 +5,7 @@
 
 ##### Compiler, tools and options.
 ##### You may change the compliter available on your platform
-CC	= CC
+CC	= mpicxx
 CFLAGS	= -w -O2 -std=c++11
 
 
@@ -27,7 +27,7 @@ CFLAGS	= -w -O2 -std=c++11
 #### Include your own library here############
 
 
-SPARSEGRIDLIB = ../src/sparsegrid
+SPARSEGRIDLIB = ../../src/sparsegrid
 SPARSEGRIDLIBINCPATH = -I$(SPARSEGRIDLIB)/include
 SPARSEGRIDLIBPATH = -L$(SPARSEGRIDLIB)/lib -lsparsegrid
 

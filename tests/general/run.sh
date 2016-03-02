@@ -1,0 +1,15 @@
+#!/bin/sh
+echo "RUNNING TESTING"
+
+METHOD='sg'
+PROCESSPERGROUP=1
+DIM=3
+SGLEVEL=$2
+GRIDTYPE=$3
+
+
+echo 'mpirun -n' $1 './main' $METHOD $PROCESSPERGROUP $DIM $SGLEVEL $GRIDTYPE
+#make clean
+#make
+
+mpirun -n $1 ./main $METHOD $PROCESSPERGROUP $DIM $SGLEVEL $GRIDTYPE

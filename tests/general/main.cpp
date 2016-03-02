@@ -5,8 +5,8 @@
 #include <random>
 #include <iomanip> // setprecision
 
-#include "../TestFunctions/TestFunctions.cpp"
-#include "../src/include.h"
+#include "../../TestFunctions/TestFunctions.cpp"
+#include "../../src/include.h"
 
 int main(int argc, char* argv[]) {
 
@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
 
 	// SG Parameters
 	int SGmaxLevel = 7;
-	double SGcutOff = 0.000001;
+	double SGcutOff = 0.0;
 	int SGgridType = 1;
 
 	int processPerGroup = 0;
@@ -34,6 +34,10 @@ int main(int argc, char* argv[]) {
 	processPerGroup = atoi(argv[2]);
 	dim = atoi(argv[3]);
 	SGmaxLevel = atoi(argv[4]);
+
+	if (argc == 6) {
+		SGgridType = atoi(argv[5]);
+	}
 
 	int size, rank;
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -51,8 +55,8 @@ int main(int argc, char* argv[]) {
 
 	if (method == "sg") {
 
-		hdmr->write(f4_1, dim, dof, SGmaxLevel, SGcutOff, SGgridType);
-		hdmr->debug("SG.WRITE");
+		hdmr->write(f4, dim, dof, SGmaxLevel, SGcutOff, SGgridType);
+		hdmr->debug("SG.WRITE", 1, 0, 1, 1, 1);
 
 		hdmr->read("surplusSG/");
 		hdmr->debug("SG.READ");
@@ -61,7 +65,7 @@ int main(int argc, char* argv[]) {
 		hdmr->debug("SG.INTERPOLATE");
 
 	} else if (method == "hdmr") {
-		hdmr->write(f4_1, dim, dof, SGmaxLevel, SGcutOff, SGgridType, HDMRmaxOrder, HDMRcutOff, xBar, processPerGroup);
+		hdmr->write(f4, dim, dof, SGmaxLevel, SGcutOff, SGgridType, HDMRmaxOrder, HDMRcutOff, xBar, processPerGroup);
 		hdmr->debug("HDMR.WRITE", 1, 0, 1, 1, 1);
 
 		hdmr->read("surplusHDMR/");
@@ -77,7 +81,7 @@ int main(int argc, char* argv[]) {
 
 
 	if (rank == 0) {
-		double error =  checkError(f4_1, x, dim, fval, dof, numberOfpoints, 0);
+		double error =  checkError(f4, x, dim, fval, dof, numberOfpoints, 0);
 		cout << "Total Percentage Error Avg : " << error << endl;
 	}
 
