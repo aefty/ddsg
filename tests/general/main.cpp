@@ -56,23 +56,23 @@ int main(int argc, char* argv[]) {
 	if (method == "sg") {
 
 		hdmr->write(f4, dim, dof, SGmaxLevel, SGcutOff, SGgridType);
-		hdmr->debug("SG.WRITE", 1, 0, 1, 1, 1);
+		hdmr->debug("SG.WRITE", 0, 1, 0, 0, 1, 0);
 
 		hdmr->read("surplusSG/");
-		hdmr->debug("SG.READ");
+		//	hdmr->debug("SG.READ");
 
 		hdmr->interpolate(x, fval, numberOfpoints);
 		hdmr->debug("SG.INTERPOLATE");
 
 	} else if (method == "hdmr") {
 		hdmr->write(f4, dim, dof, SGmaxLevel, SGcutOff, SGgridType, HDMRmaxOrder, HDMRcutOff, xBar, processPerGroup);
-		hdmr->debug("HDMR.WRITE", 1, 0, 1, 1, 1);
+		//	hdmr->debug("HDMR.WRITE", 1, 0, 1, 1, 1);
 
 		hdmr->read("surplusHDMR/");
-		hdmr->debug("HDMR.READ", 1);
+		//	hdmr->debug("HDMR.READ", 1);
 
 		hdmr->interpolate(x, fval, numberOfpoints);
-		hdmr->debug("HDMR.INTERPOLATE", 1);
+		//	hdmr->debug("HDMR.INTERPOLATE", 1);
 	} else {
 		cout << "Invalid input method ... sg or hdmr" << endl;
 		MPI_Finalize ();

@@ -22,8 +22,6 @@ int main(int argc, char* argv[]) {
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-
-
 	// Not of this matters, its just o intilize the class
 	int dim = 10;
 	int dof = 1;
@@ -31,10 +29,8 @@ int main(int argc, char* argv[]) {
 	int SGmaxLevel = 3;
 	int SGgridType = 1;
 
-
-
 	// Genearl Variables
-	int l;
+	int level = 1;
 	double val;
 
 	// Step size for plot density
@@ -75,7 +71,7 @@ int main(int argc, char* argv[]) {
 	cout << "Max Level :" << SGmaxLevel << endl;
 
 	x = 0.0;
-	cout << "Level: 1 [index|NodalPoint|x]" << endl;
+	cout << "Level: " << level << " [index|NodalPoint|x]" << endl;
 
 	while (x <= 1.0) {
 		val = sgwrite->BasisFunction(x, 1, 0);
@@ -92,37 +88,41 @@ int main(int argc, char* argv[]) {
 	};
 
 
-	l = 2;
-	cout << "=================================================" << endl;
-	cout << "Level: " << 2 << " [index|NodalPoint|x]" << endl;
-	cout << "=================================================" << endl;
-	for (int  j = 1; j < pow(2, l) ; j += 2) {
+	level++;
 
-		x = 0.0;
-
-		while (x <= 1.0) {
-			val = sgwrite->BasisFunction(x, l, j);
-			xp = sgwrite->IndextoCoordinate(l, j);
-			if (val > 0 ) {
-				cout <<  j << "|" << xp << "|" << x << " ";
-				for (double i = 0; i < val; i += 0.05) {
-					cout << ".";
-				}
-				cout << val << endl;
-			}
-
-			x += h;
-		}
-	}
-	cout << endl;
-
-
-	for (int l = 3; l <= SGmaxLevel; ++l) {
+	if (SGgridType == 1) {
+		int l = level;
 		cout << "=================================================" << endl;
+		cout << "Level: " << 2 << " [index|NodalPoint|x]" << endl;
+		cout << "=================================================" << endl;
+		for (int  j = 1; j < pow(2, l) ; j += 2) {
+
+			x = 0.0;
+
+			while (x <= 1.0) {
+				val = sgwrite->BasisFunction(x, l, j);
+				xp = sgwrite->IndextoCoordinate(l, j);
+				if (val > 0 ) {
+					cout <<  j << "|" << xp << "|" << x << " ";
+					for (double i = 0; i < val; i += 0.05) {
+						cout << ".";
+					}
+					cout << val << endl;
+				}
+
+				x += h;
+			}
+		}
+		cout << endl;
+		level++;
+	}
+
+
+	for (int l = level; l <= SGmaxLevel; ++l) {
+		cout << "================================================+" << endl;
 		cout << "Level:" << l << " [index|NodalPoint|x]" << endl;
 		cout << "=================================================" << endl;
-		for (int  j = 2; j <= pow(2, l - 1); j += 2) {
-
+		for (int  j = 2; j <= pow(2, l); j += 2) {
 			x = 0.0;
 			xp = sgwrite->IndextoCoordinate(l, j);
 

@@ -927,12 +927,19 @@ void HDMR::endTimer() {
 /*
 * Debug
 */
-void HDMR::debug( string heading, int showRunTime, int showComputePool, int showProb, int showSG_HDMRparam, int showJob) {
+void HDMR::debug( string heading, int rankToShow, int showRunTime, int showComputePool, int showProb, int showSG_HDMRparam, int showJob) {
 
 	if (computePool.grank == 0) {cout << hline;};
 
 	MPI_Barrier(MPI_COMM_WORLD);
-	sleep( (computePool.nodeRank * computePool.nodeSize + computePool.rank) / computePool.gsize);
+
+	if (rankToShow == -1) {
+		sleep( (computePool.nodeRank * computePool.nodeSize + computePool.rank) / computePool.gsize);
+	} else {
+		if (computePool.grank != rankToShow) {
+			return;
+		}
+	}
 
 	cout << "\n " + heading + " - State Dump [ Global Rank: " << computePool.grank << " of " << computePool.gsize << " ]\n";
 	cout << "================================================\n";
@@ -1034,8 +1041,6 @@ void HDMR::debug( string heading, int showRunTime, int showComputePool, int show
 		}
 	}
 
-
-	MPI_Barrier(MPI_COMM_WORLD);
 	if (computePool.grank == 0) {sleep(1); cout << hline;};
 }
 

@@ -58,15 +58,20 @@ double Post::IndextoCoordinate(int i, int j ) {
 		case 1:
 			return (j - 1.0) / (m - 1);
 			break;
+
 		case 2:
 			return (-cos(M_PI * (j - 1) / (m - 1)) + 1) / 2.0;
 			break;
+
 		case 3:
-			return (j - 1.0) / (m - 1);
+			m = pow(2.0, i) + 1.0;
+			return (j - 1) / (m - 1.0);
 			break;
-		case 4://#AE: Quadpoly
-			return (j - 1.0) / (m - 1);
+		case 4:
+			m = pow(2.0, i) + 1;
+			return (j - 1) / (m - 1.0) ;
 			break;
+
 		//#AE: throw error when grid type not defined
 		default:
 			cout << "!! gridType not valid ( " << gridType << " ) !!" << endl;
@@ -99,84 +104,20 @@ double Post::BasisFunction(double x, int i, int j) {
 };
 
 double Post::LinearBasis(double x, int i, int j) {
-
-	//	cout << x << "|" << i << "|" << j << "|";
-
 	//First Level
 	if (  i == 1 ) {
-		//		cout << 1 << endl;
 		return 1.0;
 	} else {
 		double m = pow(2.0, (i - 1));
 		double xp = IndextoCoordinate(i, j );
 		if ( fabs( x - xp ) >= (1.0 / m)) {
-
-			//			cout << 0 << endl;
 			return 0.0;
 		} else {
-			//			cout << (1 - m * fabs(x - xp)) << endl;
 			return (1 - m * fabs(x - xp));
 		}
 	}
 }
 
-
-double Post::PolyBasis(double x, int i, int j) {
-
-	if (i < 3) {
-		return LinearBasis(x, i, j);
-	} else {
-
-
-		double m = pow(2.0, (i - 1));
-		double xp = IndextoCoordinate(i, j);
-		double x1 = xp - 0.5 / m;
-		double x2 = xp + 0.5 / m;
-		double temp = (x - x1) * (x - x2) / ((xp - x1) * (xp - x2));
-
-		if (temp > 0) {
-			return temp;
-		} else {
-			return 0.0;
-		}
-
-		/*
-
-
-		double xp, x1, x2, temp;
-		double m = pow(2.0, i - 1);
-
-		// Start or end
-		if (j == 2 && x <= 0.5 ) {
-			x1 = 1. / m;
-			x2 = 1.0 - x1;
-			xp = 0.5;
-			//temp = -i * (x - x1) * (x - x2) / ((xp - x1) * (xp - x2));
-			temp = (2.0) / (x1 - x1 * x1) * (x - x1) * (x - x2);
-		} else if (j == (1 << i) && x > 0.5) {
-			x1 = 1. / m;
-			x2 = 1.0 - x1;
-			xp = 0.5;
-			//temp = -i * (x - x1) * (x - x2) / ((xp - x1) * (xp - x2));
-			temp = (2.0) / (x1 - x1 * x1) * (x - x1) * (x - x2);
-		} else {
-			xp = IndextoCoordinate(i, j); // ith index / m + 0.5*m  (ith index is not 2^i)
-			x1 = xp - 0.5 / m;
-			x2 = xp + 0.5 / m;
-			temp = (x - x1) * (x - x2) / ((xp - x1) * (xp - x2));
-		}
-
-		//cout << "(x-" << x1 << ")(x-" << x2 << ")/(" << xp << "-" << x1 << ")(" << xp << "-" << x2 << ")" << " ... " << IndextoCoordinate(i, j) << endl;
-
-		if (temp > 0) {
-			return temp;
-		} else {
-			return 0.0;
-		}
-
-		*/
-	}
-}
 
 //! Polynomial basis function
 double Post::LagrangePoly(double x, int i, int j) {
@@ -206,6 +147,45 @@ void Post::GetChebyshevPoints(int i, Array<double>& points) {
 
 /**
  * #AE
+ * Polynomial  Function
+ * @param  x [X val]
+ * @param  i [Level Depth]
+ * @param  j [Basis Function Index]
+ * @return   [Value]
+ */
+double Post::PolyBasis(double x, int i, int j) {
+
+	if (i < 3) {
+		return FlipUpBasis(x, i, j);
+	} else {
+
+		double m = pow(2.0, i);
+		double xp = IndextoCoordinate(i, j);
+
+		// Wings
+		if ( x <= (1.0 / m) && xp == 1. / m)  {
+			return (-1.0 * m * x + 2.0);
+		} else if ( x >= (1.0 - 1.0 / m )  && xp == (1.0 - 1. / m) )  {
+			return (1.0 * m * x + (2.0 - m));
+		} else {
+
+			// Body
+			double x1 = xp - 1.0 / m;
+			double x2 = xp + 1.0 / m;
+			double temp = (x - x1) * (x - x2) / ((xp - x1) * (xp - x2));
+
+			if (temp > 0) {
+				return temp;
+			} else {
+				return 0.0;
+			}
+		}
+	}
+}
+
+
+/**
+ * #AE
  * FlipUpBasis Function
  * @param  x [X val]
  * @param  i [Level Depth]
@@ -215,18 +195,25 @@ void Post::GetChebyshevPoints(int i, Array<double>& points) {
 double Post::FlipUpBasis(double x, int i, int j) {
 
 	double xp, m;
-	if (  i < 3 ) {
-		return LinearBasis(x, i, j);
+	if (  i == 1 ) {
+		return 1.0;
 	} else {
-		double m = pow(2.0, i - 1);
-		double xp = IndextoCoordinate(i, j );
+		double m = pow(2.0, i);
+		double xp = IndextoCoordinate(i, j);
 
+		// Wing
 		if ( x <= (1.0 / m) && xp == 1. / m)  {
 			return (-1.0 * m * x + 2.0);
 		} else if ( x >= (1.0 - 1.0 / m )  && xp == (1.0 - 1. / m) )  {
 			return (1.0 * m * x + (2.0 - m));
 		} else {
-			return LinearBasis(x, i, j);
+
+			// Body
+			if ( fabs( x - xp ) >= (1.0 / m)) {
+				return 0.0;
+			} else {
+				return (1 - m * fabs(x - xp));
+			}
 		}
 	}
 }

@@ -74,12 +74,8 @@ class HDMR {
 	} job;
 
 	struct Cache {
-		//double* fval;
-		//double* integral;
 		map <vector<int> , vector<double>> comFun;
 		map <vector<int> , vector<double>> fval;
-		//vector <vector<vector<double>>> fval;
-		//vector <vector<vector<double>>> integral;
 	} cache;
 
 
@@ -98,8 +94,6 @@ class HDMR {
 	HDMR(int verbose_ = 0);
 	~HDMR();
 	void clear();
-
-
 
 
 	int write( // Write HDMR
@@ -129,7 +123,7 @@ class HDMR {
 	int read(string folderName_);
 
 	void interpolate(double* xSet, double* valSet , int pointCount);
-	void debug(string heading, int showRunTime = 1, int showComputePool = 0, int showProb = 0 , int showSG_HDMRparam = 0, int showJob = 0);
+	void debug(string heading, int rankToShow = 0, int showRunTime = 1, int showComputePool = 0, int showProb = 0 , int showSG_HDMRparam = 0, int showJob = 0);
 
 
   private:
