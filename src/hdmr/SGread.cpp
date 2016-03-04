@@ -49,20 +49,8 @@ void SGread::interpolateValue(double* x, double* fvalue, double op) {
 			fvalue[i] += tempFval[i] * op;
 		}
 	}
-	return;
 }
 
 void SGread::integrateDomain(double* fvalue, double op) {
-
-	if (op == 0.0) {// Write over value
-		Integrate( &fvalue[0]);
-	} else { // Add or Subtract value base don op
-		double tempFval[TotalDof];
-		Integrate(&tempFval[0]);
-		for (int i = 0; i < TotalDof; ++i) {
-			fvalue[i] += tempFval[i] * op;
-		}
-	}
-
-	return;
+	Integrate( &fvalue[0]);
 }

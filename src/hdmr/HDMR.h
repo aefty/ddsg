@@ -24,6 +24,7 @@ class HDMR {
 	SGwrite** sgwrite;
 
 	string folderName;
+	double l2convergence = -1;
 
 	struct ProbParam {
 		int dim = -1;
@@ -73,8 +74,8 @@ class HDMR {
 	struct Cache {
 		map <vector<int> , vector<double>> fcomFun;
 		map <vector<int> , vector<double>> fval;
-		map <vector<int> , vector<double>> ival;
 		map <vector<int> , vector<double>> icomFun;
+		map <vector<int> , vector<double>> ival;
 	} cache;
 
 	struct RunTime {
@@ -129,22 +130,15 @@ class HDMR {
 	void interpolate_SG(double* xSet, double* valSet , int pointCount);
 	void interpolate_HDMR(double* xSet, double* valSet , int pointCount);
 
+	void setAllJobs();
+	int setActiveJobs_noAdaptivity();
+	int setActiveJobs_integralAdaptivty();
+	void removeDimFromJobs(vector<int>& activeDim, int d_start);
 
-	void allocJobs();
-	void deleteJobs(vector<int>& activeDim, int d_start);
+	void resetCache();
+	void setCacheFval(double* x);
 
-	void allocActiveJobs(int method);
-	int allocActiveJobs_noAdaptivity();
-	int allocActiveJobs_integralAdaptivty();
-
-	void allocCompute();
-
-	void allocCache();
-	void allocCacheFval(double* x);
-
-
-	int hdmrAdaptivity_integral(vector<int>& cadidateDim);
-
+	void setComputePool();
 
 	void writeIndexFile();
 	void readIndexFile();

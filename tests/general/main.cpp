@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
 
 	// Problem Parameters
 	int dim = 100;
-	int dof = 2;
+	int dof = 1;
 
 	// HMDR Parameters
 	int HDMRmaxOrder = 2;
@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
 
 	// SG Parameters
 	int SGmaxLevel = 7;
-	double SGcutOff = 0.0;
+	double SGcutOff = 1e-6;
 	int SGgridType = 1;
 
 	int processPerGroup = 0;
@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
 
 	if (method == "sg") {
 
-		hdmr->write(f0_1, dim, dof, SGmaxLevel, SGcutOff, SGgridType);
+		hdmr->write(f4_2, dim, dof, SGmaxLevel, SGcutOff, SGgridType);
 		hdmr->debug("SG.WRITE", 0, 1, 1, 1, 1, 0);
 
 		hdmr->read("surplusSG/");
@@ -64,14 +64,14 @@ int main(int argc, char* argv[]) {
 		hdmr->debug("SG.INTERPOLATE");
 
 	} else if (method == "hdmr") {
-		hdmr->write(f0_1, dim, dof, SGmaxLevel, SGcutOff, SGgridType, HDMRmaxOrder, HDMRcutOff, xBar, processPerGroup);
-		hdmr->debug("HDMR.WRITE");
+		hdmr->write(f4_2, dim, dof, SGmaxLevel, SGcutOff, SGgridType, HDMRmaxOrder, HDMRcutOff, xBar, processPerGroup);
+		hdmr->debug("HDMR.WRITE", 0, 1, 0, 0, 0, 1);
 
 		hdmr->read("surplusHDMR/");
-		hdmr->debug("HDMR.READ");
+		//	hdmr->debug("HDMR.READ");
 
 		hdmr->interpolate(x, fval, numberOfpoints);
-		hdmr->debug("HDMR.INTERPOLATE", 0, 1, 1, 1, 1, 1);
+		hdmr->debug("HDMR.INTERPOLATE",  0, 1, 0, 0, 0, 1);
 	} else {
 		cout << "Invalid input method ... sg or hdmr" << endl;
 		MPI_Finalize ();
@@ -80,7 +80,7 @@ int main(int argc, char* argv[]) {
 
 
 	if (rank == 0) {
-		double error =  checkError(f0_1, x, dim, fval, dof, numberOfpoints, 0);
+		double error =  checkError(f4_2, x, dim, fval, dof, numberOfpoints, 0);
 		cout << "Total Percentage Error Avg : " << error << endl;
 	}
 

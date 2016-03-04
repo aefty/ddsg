@@ -43,9 +43,12 @@ SGwrite::SGwrite(
 }
 
 SGwrite::~SGwrite() {
-
+	clear();
 }
 
+void SGwrite::clear() {
+	Cleanup();
+}
 
 // #AE
 void SGwrite::resetMPI(MPI_Comm mpiCOMM_) {
@@ -90,16 +93,16 @@ void SGwrite::build() {
 
 	// Construct sparse Grid
 	tm1 = MPI_Wtime();
-	if (rank == 0 && verbose)  { cout << hline; }
+	if (rank == 0 && verbose)  { cout << endl; }
 	BuildAdaptiveSparseGrid(print);
-	if (rank == 0 && verbose) { cout << hline; }
+	if (rank == 0 && verbose) { cout << endl; }
 	tm2 = MPI_Wtime();
 
 	// Verbose output
 	int NoPoint = NumberOfPoints();
 
 	if (rank == 0 && verbose) {
-		cout << hline;
+		cout << endl;
 		cout << "activeDim: [ ";
 
 		for (int i = 0; i < activeDim.size(); ++i) {
@@ -110,8 +113,7 @@ void SGwrite::build() {
 		cout << "Basis Function Type : " << gridType << endl;
 		cout << "Construct the adaptive sparse grid use (sec) :" << (tm2 - tm1) << endl;
 		cout << "The number of the grid is : " << NoPoint << endl;
-		cout << "The depth  of the grid is : " << InterpolationLevel() << endl;
-		cout << hline;
+		cout << "The depth  of the grid is : " << InterpolationLevel() << endl << endl;
 	}
 }
 

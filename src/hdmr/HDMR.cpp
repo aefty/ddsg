@@ -46,12 +46,20 @@ HDMR::HDMR(int verbose_) {
 	runTime.verbose = verbose_;
 }
 HDMR::~HDMR() {
-	clear();
+
+	for (int i = 0; i < job.active_size; ++i) {
+		delete sgread[i];
+	}
 	delete[] sgread;
+
+	clear();
 }
 void HDMR::clear() {
 
 	MPI_Barrier(MPI_COMM_WORLD);
+
+	folderName = {};
+	l2convergence = {};
 
 	probParam = {};
 	sgParam = {};
@@ -59,8 +67,14 @@ void HDMR::clear() {
 	computePool = {};
 	job = {};
 	runTime = {};
+
+	resetCache();
+}
+void HDMR::resetCache() {
 	cache.fval.clear();
 	cache.fcomFun.clear();
+	cache.ival.clear();
+	cache.icomFun.clear();
 }
 
 
@@ -128,7 +142,7 @@ int HDMR::write( //  For HDMR
 	}
 
 	// Allocate compute resources
-	allocCompute();
+	setComputePool();
 
 	// Create working directory
 	if (computePool.grank == 0) {
@@ -143,18 +157,20 @@ int HDMR::write( //  For HDMR
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	// Allocate full job on all processes
-	allocJobs();
+	setAllJobs();
 
 
-	// Genearet a a sg pointer for all possible jobs (they will be instantiated as needed)
-	sgwrite = new SGwrite*[job.all_size];
-
+	sgwrite = new SGwrite*[hdmrParam.maxOrder];
+	for (int d = 1; d <= hdmrParam.maxOrder; ++d) {
+		sgwrite[d - 1] = new SGwrite(problemFunc, d, probParam.dof , sgParam.maxLevel, sgParam.cutOff, sgParam.gridType , runTime.verbose);
+		sgwrite[d - 1]->setAnchor(hdmrParam.xBar);
+	}
 
 	// Generate the active jobs to be processed
 	if (hdmrParam.cutOff == 0.0) {
-		runTime.interpolationPoints = allocActiveJobs_noAdaptivity();
+		runTime.interpolationPoints = setActiveJobs_noAdaptivity();
 	} else {
-		runTime.interpolationPoints = allocActiveJobs_integralAdaptivty();
+		runTime.interpolationPoints = setActiveJobs_integralAdaptivty();
 	}
 
 	// Write index and log file
@@ -163,7 +179,13 @@ int HDMR::write( //  For HDMR
 
 	// Delete all instance of sgwrite
 	MPI_Barrier(MPI_COMM_WORLD);
+
+	// Delete instance of sgwrite
+	for (int d = 1; d <= hdmrParam.maxOrder; ++d) {
+		delete sgwrite[d - 1];
+	}
 	delete[] sgwrite;
+
 
 	// End timer
 	endTimer();
@@ -204,7 +226,7 @@ int HDMR::write( // For SG
 	MPI_Comm_size(MPI_COMM_WORLD, &computePool.processPerNode);
 
 	// Allocate compute scheme
-	allocCompute();
+	setComputePool();
 
 	// Create working director
 	if (computePool.grank == 0) {
@@ -264,7 +286,7 @@ int HDMR::read(string folderName_) {
 	readIndexFile();
 
 	// Allocate parralelization scheme
-	allocCompute();
+	setComputePool();
 
 	if (runTime.mode == "SG_READ") {
 
@@ -272,7 +294,7 @@ int HDMR::read(string folderName_) {
 		sgread = new SGread*[1];
 		sgread[0] = new SGread(runTime.verbose);
 		sgread[0]->resetMPI(computePool.subComm);
-		sgread[0]->read(folderName + "surplus.data");
+		runTime.interpolationPoints = sgread[0]->read(folderName + "surplus.data");
 	} else {
 
 
@@ -366,8 +388,7 @@ void HDMR::interpolate_HDMR(double* xSet, double* valSet , int pointCount) {
 	vector<int> alphabet;
 	vector<int> sub_alphabet;
 
-	// Allocate cache
-	allocCache();
+	resetCache();
 
 	// Cycle through each point
 	for (int r = 0; r < pointCount; ++r) {
@@ -382,7 +403,7 @@ void HDMR::interpolate_HDMR(double* xSet, double* valSet , int pointCount) {
 			linalg_add(&valSet[valShift], hdmrParam.fxBar);
 
 			// Allocate the cache.fval on current process
-			allocCacheFval(&xSet[xShift]);
+			setCacheFval(&xSet[xShift]);
 
 			// *** Kernel of the code!
 			// Calculate Component functions
@@ -624,7 +645,7 @@ void HDMR::readIndexFile() {
 /*
 * Job Allocation
 */
-void HDMR::allocJobs() {
+void HDMR::setAllJobs() {
 
 	// Initilize the job list
 	job.all.resize(hdmrParam.maxOrder + 1);
@@ -658,17 +679,7 @@ void HDMR::allocJobs() {
 		} while (next_combination(alphabet.begin(), alphabet.end(), sub_alphabet.begin(), sub_alphabet.end()));
 	}
 }
-void HDMR::allocActiveJobs(int method) {
-
-	// Copy all jobs to active jobs
-	if (method == 0) {
-		job.active = job.all;
-		job.active_size = job.all_size;
-	} else if (method == 1) {
-
-	}
-}
-int HDMR::allocActiveJobs_noAdaptivity() {
+int HDMR::setActiveJobs_noAdaptivity() {
 
 	// Generate lower dimension surplus files for all active Jobs
 	vector<int> activeDim;
@@ -676,41 +687,35 @@ int HDMR::allocActiveJobs_noAdaptivity() {
 	int interpolationPoints = 0;
 	int jobIndex = 1; // Ignore job 0, that just the constant
 
-	for (int d = 1; d < job.all.size() ; ++d) {
+	// Set active job to be all the jobs
+	job.active = job.all;
+	job.active_size = job.all_size;
+
+	for (int d = 1; d <= hdmrParam.maxOrder ; ++d) {
 
 		// Resize active Dim to current hdmr order
 		activeDim.resize(d);
 
 		// Go thorugh job.active list
-		for (int i = 0; i < job.all[d].size(); ++i) {
+		for (int i = 0; i < job.active[d].size(); ++i) {
 
 			// Round robin taks allocation
 			if (i % computePool.nodeSize ==  computePool.nodeRank) {
 
 				// Get active dimensions and set file path
-				activeDim = job.all[d][i];
+				activeDim = job.active[d][i];
 				fileName = folderName + vector_join(activeDim, ".") + ".data";
 
-				// Instatiate the sparse grid
-				sgwrite[jobIndex] = new SGwrite(problemFunc, d, probParam.dof , sgParam.maxLevel, sgParam.cutOff, sgParam.gridType , runTime.verbose);
-				sgwrite[jobIndex]->setAnchor(hdmrParam.xBar);
-				sgwrite[jobIndex]->resetMPI(computePool.subComm);
+				// Set computPool
+				sgwrite[d - 1]->resetMPI(computePool.subComm);
 
 				//Build and write sparse grid
-				sgwrite[jobIndex]->build(activeDim);
-				interpolationPoints += sgwrite[jobIndex]->write(fileName);
-
-				// Delete instatitated sg object
-				delete sgwrite[jobIndex];
+				sgwrite[d - 1]->build(activeDim);
+				interpolationPoints += sgwrite[d - 1]->write(fileName);
+				sgwrite[d - 1]->clear();
 			}
-
-			jobIndex++;
 		}
 	}
-
-	// Set active job to be all the jobs ... that is no adpativity
-	job.active = job.all;
-	job.active_size = job.all_size;
 
 	// Sum up all interpolation points accross all process
 	if (computePool.rank != 0) {
@@ -718,64 +723,66 @@ int HDMR::allocActiveJobs_noAdaptivity() {
 	}
 	MPI_Allreduce(MPI_IN_PLACE, &interpolationPoints, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
 
+	l2convergence = -1;
+
 	return interpolationPoints;
 }
-int HDMR::allocActiveJobs_integralAdaptivty() {
+int HDMR::setActiveJobs_integralAdaptivty() {
 
 	// Generate lower dimension surplus files for all active Jobs
 	vector<int> activeDim;
 	vector<int> sub_activeDim;
 
 	vector<double> sum_icomfun(probParam.dof, 0.0);
-	vector<double> temp(probParam.dof, 0.0);
+
+	vector<double> integral(probParam.dof, 0.0);
+	vector<double> integral_last(probParam.dof, 0.0);
+
 	vector <vector<int>> cadidateDim;
 	vector <int> rejectDimIndex;
-	double nu;
+
+	int interpolationPoints = 0;
+	double nu = 100;
+	double rho = 100;
+	double rho_last = 100;
 
 	vector<double> ival;
 	vector<double> mpiContainer_icomFun;
 
 	string fileName = "";
 
-	int interpolationPoints = 0;
-	int jobIndex = 1;
-	int jobIndex_last = 0;
-
 	// Set active job to all job
 	job.active = job.all;
 
+	integral_last = hdmrParam.fxBar;
 
 	for (int d = 1; d <= hdmrParam.maxOrder; ++d) {
 
-		double tt = -1 * MPI_Wtime();
-
-		if (computePool.grank == 0) { cout << "ROUND " << d << endl; }
-		// Set candindate dimenension set and container for active dimension
-
+		// Check if we have any jobs left
 		if (job.active[d].size() < 1) {
 			break;
 		}
 
-		if (computePool.grank == 0) { cout << "START " << endl; }
+		// Check if we have converged
+		if (rho < hdmrParam.cutOff) {
+
+			for (int i = d; i <= hdmrParam.maxOrder; ++i) {
+				job.active[i].clear();
+			}
+			break;
+		}
+
+		// Set candindate dimenension set and container for active dimension
 		cadidateDim = job.active[d];
 		activeDim.resize(d);
 		rejectDimIndex.resize(cadidateDim.size(), 0);
-
-		if (computePool.grank == 0) { cout << computePool.grank << " Time1 : " << tt + MPI_Wtime() << hline; }
 
 		// Clear and resize MPI container
 		ival.clear();
 		ival.resize(cadidateDim.size()*probParam.dof, 0.0);
 
-		if (computePool.grank == 0) { cout << computePool.grank << " Time2 : " << tt + MPI_Wtime() << hline; }
-
 		mpiContainer_icomFun.clear();
 		mpiContainer_icomFun.resize(cadidateDim.size()*probParam.dof, 0.0);
-
-		jobIndex_last = jobIndex;
-
-		if (computePool.grank == 0) { cout << computePool.grank << " Time3 : " << tt + MPI_Wtime() << hline; }
-
 
 		// Parralel processing of job list
 		for (int i = 0; i < cadidateDim.size(); ++i) {
@@ -783,16 +790,12 @@ int HDMR::allocActiveJobs_integralAdaptivty() {
 
 				// Get active dimensions
 				activeDim = cadidateDim[i];
+				fileName = folderName + vector_join(activeDim, ".") + ".data";
 
 				// Instatiate the sparse grid
-				sgwrite[jobIndex] = new SGwrite(problemFunc, d, probParam.dof , sgParam.maxLevel, sgParam.cutOff, sgParam.gridType , runTime.verbose);
-				sgwrite[jobIndex]->setAnchor(hdmrParam.xBar);
-				sgwrite[jobIndex]->resetMPI(computePool.subComm);
-
-
-				//Build write and cleanup sparse grid
-				sgwrite[jobIndex]->build(activeDim);
-				sgwrite[jobIndex]->integrateDomain(&ival[i * probParam.dof]);
+				sgwrite[d - 1]->resetMPI(computePool.subComm);
+				sgwrite[d - 1]->build(activeDim);
+				sgwrite[d - 1]->integrateDomain(&ival[i * probParam.dof]);
 
 				// Set the relvant component of mpiContainer_icomFun to ival
 				// icomFun = ival -  sum_{ all permutations of =u }(icomFun_u)
@@ -811,7 +814,7 @@ int HDMR::allocActiveJobs_integralAdaptivty() {
 						sub_activeDim.assign(activeDim.begin(), activeDim.end() - k);
 
 						// Sum up all lower combinations of the icomFun
-						// Calculate : temp = sum_{ all permutations of =u }(icomFun_u)
+						// Calculate : sum_{ all permutations of =u }(icomFun_u)
 						do {
 							linalg_add(sum_icomfun, cache.icomFun[sub_activeDim]);
 						} while (next_combination(activeDim.begin(), activeDim.end(), sub_activeDim.begin(), sub_activeDim.end()));
@@ -824,76 +827,90 @@ int HDMR::allocActiveJobs_integralAdaptivty() {
 				// Calculate  = ival - sum_{ all permutations of =u }(icomFun_u)
 				linalg_less(&mpiContainer_icomFun[i * probParam.dof], sum_icomfun);
 
-
 				nu = linalg_l2(&mpiContainer_icomFun[i * probParam.dof], probParam.dof) / linalg_l2(sum_icomfun);
 
-				//	print_vec(activeDim, "activeDim");
-				//	print_vec(&mpiContainer_icomFun[i * probParam.dof], probParam.dof, "mpiContainer_icomFun");
-				//	print_vec(sum_icomfun, "sum_icomfun");
+				print_vec(activeDim, "activeDim");
+				cout << "NU " << nu << endl;
 
-				//	cout << "Nu " << nu << endl;
-
+				// Add dimension index to reject list
 				if (nu < hdmrParam.cutOff) {
 					rejectDimIndex[i] = 1;
-					//		cout << "REJECT !" << endl;
 				}
-				//	cout << hline;
+
+				// Write out surplus file only if its not a rejected dimension or if its first order
+				if (!rejectDimIndex[i] || d == 1 ) {
+					interpolationPoints += sgwrite[d - 1]->write(fileName);
+				}
+
+				// clear object
+				sgwrite[d - 1]->clear();
 			}
-
-			jobIndex++;
 		}
-
-		if (computePool.grank == 0) { cout << computePool.grank << " Time4 : " << tt + MPI_Wtime() << hline; }
 
 		// Clear the contents of the local rank 0, so we dont double count in reduceAll and Share the the integral globally
 		if (computePool.rank != 0) {
 			fill(mpiContainer_icomFun.begin(), mpiContainer_icomFun.end() , 0.0);
 		}
 
-		if (computePool.grank == 0) { cout << computePool.grank << " Time5 : " << tt + MPI_Wtime() << hline; }
-
 		MPI_Allreduce(MPI_IN_PLACE, &mpiContainer_icomFun[0], mpiContainer_icomFun.size(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 		MPI_Allreduce(MPI_IN_PLACE, &rejectDimIndex[0], rejectDimIndex.size(), MPI_INT, MPI_MAX, MPI_COMM_WORLD);
 
-
-		// Allocate the integral to all local cache
+		// Allocate the icomFun to all local cache
 		for (int i = 0; i < cadidateDim.size(); ++i) {
 			cache.icomFun[cadidateDim[i]].assign(&mpiContainer_icomFun[i * probParam.dof], &mpiContainer_icomFun[i * probParam.dof] + probParam.dof);
 		}
 
-		jobIndex = jobIndex_last;
+		// Remove hdmr jobs that are not required
 		for (int i = 0; i < cadidateDim.size(); ++i) {
 
 			// Set alphabet for cobination
 			activeDim = cadidateDim[i];
 
-			if (rejectDimIndex[i] && d != 1) {
-				deleteJobs(activeDim, d);
-			} else {
-
-				if (i % computePool.nodeSize ==  computePool.nodeRank) {
-					fileName = folderName + vector_join(activeDim, ".") + ".data";
-					interpolationPoints += sgwrite[jobIndex]->write(fileName);
-					delete sgwrite[jobIndex];
+			if (rejectDimIndex[i]) {
+				if (d == 1) {
+					removeDimFromJobs(activeDim, 2);
+				} else {
+					removeDimFromJobs(activeDim, d);
 				}
 			}
-			jobIndex++;
 		}
+
+		// Initilize temp as zero and sum up all components
+		fill(integral.begin(), integral.end(), 0.0);
+		for (auto icomFun : cache.icomFun) {
+			linalg_add(integral, icomFun.second);
+		}
+		linalg_add(integral, hdmrParam.fxBar);
+
+		if (computePool.grank == 0) {
+			print_vec(integral_last, "integral_last");
+			print_vec(integral, "integral");
+
+		}
+
+		rho = 1.0 / linalg_l2(integral_last);
+		linalg_less(integral_last, integral);
+
+		if (computePool.grank == 0) {print_vec(integral_last, "Diff");}
+		rho *= linalg_l2(integral_last);
+
+		if (computePool.grank == 0) {
+			cout << "RHO : " << rho << endl;
+			cout << hline;
+		}
+
+		integral_last = integral;
 	}
 
+	l2convergence = rho;
 
-
-	if (computePool.grank == 0) { cout << "END1" << endl; }
-
+	// Update job.active_size and new hdmrParam.maxOrder
 	for (int d = 0; d < job.active.size(); ++d) {
-
 		job.active_size += job.active[d].size();
 		if (job.active[d].size() != 0) {
 			hdmrParam.maxOrder = d;
 		}
 	}
-
-	if (computePool.grank == 0) { cout << "END2" << endl; }
 
 	// Sum up all interpolation points accross all process
 	if (computePool.rank != 0) {
@@ -901,19 +918,12 @@ int HDMR::allocActiveJobs_integralAdaptivty() {
 	}
 	MPI_Allreduce(MPI_IN_PLACE, &interpolationPoints, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
 
-
-	if (computePool.grank == 0) { cout << "END3" << endl; }
-
 	return interpolationPoints;
 }
 
-int HDMR::hdmrAdaptivity_integral(vector<int>& cadidateDim) {
 
 
-
-}
-
-void HDMR::deleteJobs(vector<int>& activeDim, int d_start) {
+void HDMR::removeDimFromJobs(vector<int>& activeDim, int d_start) {
 
 	int reject = 0;
 	vector<vector<int>> temp;
@@ -940,17 +950,8 @@ void HDMR::deleteJobs(vector<int>& activeDim, int d_start) {
 
 
 
-/*
-* Allocaet Cache
-*/
-void HDMR::allocCache() {
-	cache.fval.clear();
-	cache.fcomFun.clear();
-	cache.ival.clear();
-	cache.icomFun.clear();
-}
 
-void HDMR::allocCacheFval(double* x) {
+void HDMR::setCacheFval(double* x) {
 
 	int activeJobIndex;
 	vector<double> xPartial;
@@ -984,7 +985,7 @@ void HDMR::allocCacheFval(double* x) {
 /*
 * Compute Allocation
 */
-void HDMR::allocCompute() {
+void HDMR::setComputePool() {
 
 	if (runTime.mode == "SG_WRITE") {
 		// 1 node with all process in that node
@@ -1052,7 +1053,7 @@ void HDMR::allocCompute() {
 		MPI_Comm_rank(computePool.subComm , &computePool.rank);
 
 	} else {
-		err("ERROR In allocCompute(), runTime.mode not defined");
+		err("ERROR In setComputePool(), runTime.mode not defined");
 	}
 
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -1121,6 +1122,7 @@ void HDMR::debug( string heading, int rankToShow, int showRunTime, int showCompu
 				cout << "  Total Process Max Time: " << runTime.maxTime << endl;
 				cout << "  Total Process Min Time: " << runTime.minTime << endl;
 				cout << "  Total Interpolation Points: " << runTime.interpolationPoints << endl;
+				cout << "  HDMR L2 Convergence: " << l2convergence << endl;
 			}
 		} else {
 			cout << "\n> RunTime Param\n";
@@ -1131,6 +1133,7 @@ void HDMR::debug( string heading, int rankToShow, int showRunTime, int showCompu
 			cout << "  Total Process Max Time: " << runTime.maxTime << endl;
 			cout << "  Total Process Min Time: " << runTime.minTime << endl;
 			cout << "  Total Interpolation Points: " << runTime.interpolationPoints << endl;
+			cout << "  HDMR L2 Convergence: " << l2convergence << endl;
 		}
 	}
 
