@@ -829,8 +829,8 @@ int HDMR::setActiveJobs_integralAdaptivty() {
 
 				nu = linalg_l2(&mpiContainer_icomFun[i * probParam.dof], probParam.dof) / linalg_l2(sum_icomfun);
 
-				print_vec(activeDim, "activeDim");
-				cout << "NU " << nu << endl;
+				//		print_vec(activeDim, "activeDim");
+				//		cout << "NU " << nu << endl;
 
 				// Add dimension index to reject list
 				if (nu < hdmrParam.cutOff) {
@@ -882,11 +882,11 @@ int HDMR::setActiveJobs_integralAdaptivty() {
 		}
 		linalg_add(integral, hdmrParam.fxBar);
 
-		if (computePool.grank == 0) {
-			print_vec(integral_last, "integral_last");
-			print_vec(integral, "integral");
+		//	if (computePool.grank == 0) {
+		//		print_vec(integral_last, "integral_last");
+		//		print_vec(integral, "integral");
 
-		}
+		//	}
 
 		rho = 1.0 / linalg_l2(integral_last);
 		linalg_less(integral_last, integral);
@@ -894,10 +894,10 @@ int HDMR::setActiveJobs_integralAdaptivty() {
 		if (computePool.grank == 0) {print_vec(integral_last, "Diff");}
 		rho *= linalg_l2(integral_last);
 
-		if (computePool.grank == 0) {
-			cout << "RHO : " << rho << endl;
-			cout << hline;
-		}
+		//		if (computePool.grank == 0) {
+		//			cout << "RHO : " << rho << endl;
+		//			cout << hline;
+		//		}
 
 		integral_last = integral;
 	}
