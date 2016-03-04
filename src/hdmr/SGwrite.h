@@ -21,12 +21,12 @@ class SGwrite: public AdaptiveSparseGrid {
 
   void setAnchor(vector<double>& xBar);
 
-  int build(vector<int>& activeDim_ );
-  int build();
+  void build(vector<int>& activeDim_ );
+  void build();
 
-  void write(string surplusFileName);
+  int write(string surplusFileName);
 
-  void integrateDomain(double* fvalue, double op = 0.0);
+  void integrateDomain(double* fvalue);
 
   void resetMPI(MPI_Comm mpiCOMM_);
 

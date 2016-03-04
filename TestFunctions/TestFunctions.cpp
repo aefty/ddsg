@@ -42,6 +42,19 @@ void f0(double* x ,  int dim, double* val) {
 	};
 }
 
+// Sum of squares
+void f0_1(double* x ,  int dim, double* val) {
+	val[0] = 0.0;
+	for (int i = 0; i < dim; ++i) {
+		val[0] += x[i] * x[i];
+	};
+
+	val[1] = 0.0;
+	for (int i = 0; i < dim; ++i) {
+		val[1] += x[i] * x[i] * x[i];
+	};
+}
+
 // OSCILLATORY
 void f1(double* x ,  int dim, double* val ) {
 	val[0] = 0.0;

@@ -1,15 +1,17 @@
 #!/bin/sh
 echo "RUNNING TESTING"
 
-METHOD='sg'
+METHOD='hdmr'
 PROCESSPERGROUP=1
-DIM=2
+DIM=10
 SGLEVEL=$2
 GRIDTYPE=$1
+HDMRmaxOrder=2
+HDMRcutOff=0.00000001
 
 
-echo 'mpirun -n' 4 './main' $METHOD $PROCESSPERGROUP $DIM $SGLEVEL $GRIDTYPE
+echo 'mpirun -n' 4 './main' $METHOD $PROCESSPERGROUP $DIM $SGLEVEL $GRIDTYPE $HDMRmaxOrder $HDMRcutOff
 #make clean
 #make
 
-mpirun -n 1 ./main $METHOD $PROCESSPERGROUP $DIM $SGLEVEL $GRIDTYPE
+mpirun -n 4 ./main $METHOD $PROCESSPERGROUP $DIM $SGLEVEL $GRIDTYPE $HDMRmaxOrder $HDMRcutOff

@@ -62,7 +62,7 @@ void SGwrite::setAnchor(vector<double>& xBar_) {
 	xBar = xBar_;
 }
 
-int SGwrite::build(vector<int>& activeDim_) {
+void SGwrite::build(vector<int>& activeDim_) {
 
 	// copy active Dimentions and xBar
 	activeDim.resize(activeDim_.size());
@@ -71,12 +71,12 @@ int SGwrite::build(vector<int>& activeDim_) {
 	// Initilize masked x value
 	maskedX.resize(xBar.size());
 
-	return build();
+	build();
 }
 
 
 
-int SGwrite::build() {
+void SGwrite::build() {
 
 	double tm1, tm2;
 
@@ -113,14 +113,12 @@ int SGwrite::build() {
 		cout << "The depth  of the grid is : " << InterpolationLevel() << endl;
 		cout << hline;
 	}
-
-	return NoPoint;
 }
 
 
 
 
-void SGwrite::write(string surplusFileName) {
+int SGwrite::write(string surplusFileName) {
 
 	char surplusFileName_char [surplusFileName.length() + 1];
 	strcpy(surplusFileName_char, surplusFileName.c_str());
@@ -132,20 +130,11 @@ void SGwrite::write(string surplusFileName) {
 	}
 	StoreSurplus(index, surplusFileName_char);
 
+	return NumberOfPoints();
 }
+void SGwrite::integrateDomain(double* fvalue) {
 
-
-void SGwrite::integrateDomain(double* fvalue, double op) {
-
-	if (op == 0.0) {// Write over value
-		SpIntegrate( &fvalue[0]);
-	} else { // Add or Subtract value base don op
-		double tempFval[TotalDof];
-		SpIntegrate(&tempFval[0]);
-		for (int i = 0; i < TotalDof; ++i) {
-			fvalue[i] += tempFval[i] * op;
-		}
-	}
+	SpIntegrate( &fvalue[0]);
 }
 
 void SGwrite::EvaluateFunctionAtThisPoint( AdaptiveARRAY<double>* x ) {

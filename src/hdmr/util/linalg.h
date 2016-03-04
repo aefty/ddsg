@@ -3,12 +3,33 @@
 
 namespace std_plus {
 
-  void linalg_dot(vector<double>& A , vector<double>& B, double* rtrn) {
-    rtrn[0] = 0.0;
 
+
+
+  double linalg_dot(vector<double>& A , vector<double>& B) {
+    double rtrn = 0;
     for (int i = 0; i < A.size(); ++i) {
-      rtrn[0] += A[i] * B[i];
+      rtrn += A[i] * B[i];
     }
+
+    return rtrn;
+  }
+
+
+  double linalg_l2(vector<double>& A) {
+    double rtrn = 0;
+    for (int i = 0; i < A.size(); ++i) {
+      rtrn += A[i] * A[i];
+    }
+    return pow(rtrn, 0.5);
+  }
+
+  double linalg_l2(double* A, int d) {
+    double rtrn = 0;
+    for (int i = 0; i < d; ++i) {
+      rtrn += A[i] * A[i];
+    }
+    return pow(rtrn, 0.5);
   }
 
   void linalg_sdot(double a, vector<double>& A ,  vector<double>& rtrn) {
@@ -19,6 +40,13 @@ namespace std_plus {
 
   void linalg_less(vector<double>& A,  vector<double>& B) {
     for (int i = 0; i < A.size(); ++i) {
+      A[i] -= B[i];
+    }
+  }
+
+
+  void linalg_less(double* A,  vector<double>& B) {
+    for (int i = 0; i < B.size(); ++i) {
       A[i] -= B[i];
     }
   }

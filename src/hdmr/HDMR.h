@@ -25,11 +25,6 @@ class HDMR {
 
 	string folderName;
 
-	//	typedef vector<double> DataContainerDouble;
-	//	typedef map <string, DataContainerDouble>  ObjDouble;
-	//	typedef map <string, int>  ArrInt;
-	//	typedef map <string, vector<double>> var;
-
 	struct ProbParam {
 		int dim = -1;
 		int dof = -1;
@@ -71,14 +66,16 @@ class HDMR {
 		int all_size = 0;
 		vector <vector<vector<int>>> active;
 		int active_size = 0;
+		vector <list<vector<int>>> full;
+
 	} job;
 
 	struct Cache {
-		map <vector<int> , vector<double>> comFun;
+		map <vector<int> , vector<double>> fcomFun;
 		map <vector<int> , vector<double>> fval;
+		map <vector<int> , vector<double>> ival;
+		map <vector<int> , vector<double>> icomFun;
 	} cache;
-
-
 
 	struct RunTime {
 		int verbose = 0;
@@ -134,13 +131,19 @@ class HDMR {
 
 
 	void allocJobs();
+	void deleteJobs(vector<int>& activeDim, int d_start);
+
 	void allocActiveJobs(int method);
+	int allocActiveJobs_noAdaptivity();
+	int allocActiveJobs_integralAdaptivty();
 
 	void allocCompute();
 
 	void allocCache();
-	void allocCacheFval_prl(double* x);
 	void allocCacheFval(double* x);
+
+
+	int hdmrAdaptivity_integral(vector<int>& cadidateDim);
 
 
 	void writeIndexFile();
@@ -151,11 +154,14 @@ class HDMR {
 
 	void err(string message) {
 		string line = "";
+		int grank;
+		MPI_Comm_rank(MPI_COMM_WORLD, &grank);
 		line.insert(0, message.length(), '=');
-		if (computePool.grank == 0) {
+		if (grank == 0) {
 			cout << "\n" + line + "\n" << message << "\n" + line + "\n";
-			exit(1);
 		}
+		MPI_Barrier(MPI_COMM_WORLD);
+		exit(1);
 	}
 };
 
