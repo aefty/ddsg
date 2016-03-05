@@ -10,10 +10,7 @@ aryan.eftekhari@usi.ch/gmail.com
 #include "SGwrite.h"
 #include "SGread.h"
 #include "HDMR.h"
-#include "util/combination.h"
-#include "util/stringchop.h"
-#include "util/linalg.h"
-#include "util/print.h"
+#include "cpp_util/include.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,8 +22,6 @@ aryan.eftekhari@usi.ch/gmail.com
 #include <map>
 #include <algorithm>
 #include <unistd.h> // Sleep
-#include <unordered_map>
-
 
 using std::cout;
 using std::string;
@@ -34,10 +29,7 @@ using std::vector;
 using std::map;
 using std::find;
 using std::fill;
-using std::unordered_map;
-using namespace std_plus;
-
-
+using namespace cpp_util;
 
 /*
  * Constructur, Destructor and clear
@@ -774,7 +766,11 @@ int HDMR::setActiveJobs_integralAdaptivty() {
 
 		// Set candindate dimenension set and container for active dimension
 		cadidateDim = job.active[d];
+
+		activeDim.clear();
 		activeDim.resize(d);
+
+		rejectDimIndex.clear();
 		rejectDimIndex.resize(cadidateDim.size(), 0);
 
 		// Clear and resize MPI container
@@ -829,17 +825,23 @@ int HDMR::setActiveJobs_integralAdaptivty() {
 
 				nu = linalg_l2(&mpiContainer_icomFun[i * probParam.dof], probParam.dof) / linalg_l2(sum_icomfun);
 
-				//		print_vec(activeDim, "activeDim");
-				//		cout << "NU " << nu << endl;
+				printd(activeDim, "activeDim");
+				printd(&ival[i * probParam.dof], probParam.dof, "ival");
+				printd(sum_icomfun, "sum_icomfun");
+				printd(&mpiContainer_icomFun[i * probParam.dof], probParam.dof, "icomFun");
+
+				printd(nu, "Nu");
 
 				// Add dimension index to reject list
 				if (nu < hdmrParam.cutOff) {
 					rejectDimIndex[i] = 1;
+					printd("Reject Dim !!!!!!!!!!");
 				}
 
 				// Write out surplus file only if its not a rejected dimension or if its first order
 				if (!rejectDimIndex[i] || d == 1 ) {
 					interpolationPoints += sgwrite[d - 1]->write(fileName);
+					printd("Accept Dim");
 				}
 
 				// clear object
@@ -860,6 +862,10 @@ int HDMR::setActiveJobs_integralAdaptivty() {
 			cache.icomFun[cadidateDim[i]].assign(&mpiContainer_icomFun[i * probParam.dof], &mpiContainer_icomFun[i * probParam.dof] + probParam.dof);
 		}
 
+
+		printd(rejectDimIndex, "rejectDimIndex");
+		printd();
+
 		// Remove hdmr jobs that are not required
 		for (int i = 0; i < cadidateDim.size(); ++i) {
 
@@ -876,28 +882,27 @@ int HDMR::setActiveJobs_integralAdaptivty() {
 		}
 
 		// Initilize temp as zero and sum up all components
-		fill(integral.begin(), integral.end(), 0.0);
+		integral = hdmrParam.fxBar;
 		for (auto icomFun : cache.icomFun) {
 			linalg_add(integral, icomFun.second);
 		}
-		linalg_add(integral, hdmrParam.fxBar);
 
-		//	if (computePool.grank == 0) {
-		//		print_vec(integral_last, "integral_last");
-		//		print_vec(integral, "integral");
-
-		//	}
+		if (computePool.grank == 0) {
+			printd(integral_last, "integral_last");
+			printd(integral, "integral");
+		}
 
 		rho = 1.0 / linalg_l2(integral_last);
 		linalg_less(integral_last, integral);
 
-		if (computePool.grank == 0) {print_vec(integral_last, "Diff");}
+		printd(integral_last, "-Diff");
+
 		rho *= linalg_l2(integral_last);
 
-		//		if (computePool.grank == 0) {
-		//			cout << "RHO : " << rho << endl;
-		//			cout << hline;
-		//		}
+		if (computePool.grank == 0) {
+			printd(rho, "RHO");
+			printd();
+		}
 
 		integral_last = integral;
 	}
@@ -925,7 +930,7 @@ int HDMR::setActiveJobs_integralAdaptivty() {
 
 void HDMR::removeDimFromJobs(vector<int>& activeDim, int d_start) {
 
-	int reject = 0;
+	int match;
 	vector<vector<int>> temp;
 
 	for (int d = d_start; d < job.active.size(); ++d) {
@@ -933,18 +938,20 @@ void HDMR::removeDimFromJobs(vector<int>& activeDim, int d_start) {
 		temp.clear();
 
 		for (int i = 0; i < job.active[d].size(); ++i) {
-			reject = 0;
+			match = 0;
 			for (int k = 0; k < activeDim.size(); ++k) {
-				if ( find( job.active[d][i].begin(), job.active[d][i].end(), activeDim[k]) != job.active[d][i].end() ) {
-					reject = 1;
-					break;
-				}
+				match += contains(job.active[d][i], activeDim[k]);
 			}
-			if (!reject) {
+
+			if (match != activeDim.size() ) {
+				printd(job.active[d][i], "ACCEPT THIS");
 				temp.push_back(job.active[d][i]);
 			}
 		}
+		job.active[d].clear();
 		job.active[d] = temp;
+
+		printd(job.active[d], "job.active[d]");
 	}
 }
 

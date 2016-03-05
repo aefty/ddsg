@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
 
 	level++;
 
-	if (SGgridType == 1) {
+	if (SGgridType == 1 || SGgridType == 4 ) {
 		int l = level;
 		cout << "=================================================" << endl;
 		cout << "Level: " << 2 << " [index|NodalPoint|x]" << endl;

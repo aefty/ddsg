@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
 
 	// SG Parameters
 	int SGmaxLevel = 7;
-	double SGcutOff = 1e-6;
+	double SGcutOff = 0.0;
 	int SGgridType = 1;
 
 	int processPerGroup = 0;
@@ -43,14 +43,13 @@ int main(int argc, char* argv[]) {
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
 	// Genearte test points
-	int numberOfpoints = 1000;
+	int numberOfpoints = 10000;
 	double* x = new double[dim * numberOfpoints];
 	double* fval = new double[dof * numberOfpoints];
 	generateRandom(x, dim, numberOfpoints);
 
 	HDMR* hdmr = new HDMR();
 	vector<double> xBar(dim, 0.5);
-
 
 	if (method == "sg") {
 
@@ -62,10 +61,9 @@ int main(int argc, char* argv[]) {
 
 		hdmr->interpolate(x, fval, numberOfpoints);
 		hdmr->debug("SG.INTERPOLATE");
-
 	} else if (method == "hdmr") {
 		hdmr->write(f4_2, dim, dof, SGmaxLevel, SGcutOff, SGgridType, HDMRmaxOrder, HDMRcutOff, xBar, processPerGroup);
-		hdmr->debug("HDMR.WRITE", 0, 1, 0, 0, 0, 1);
+		hdmr->debug("HDMR.WRITE", 0, 1, 0, 0, 1, 1);
 
 		hdmr->read("surplusHDMR/");
 		//	hdmr->debug("HDMR.READ");
