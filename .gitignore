@@ -32,3 +32,6 @@
 *.data
 *index
 *log
+
+#Ignore folders
+src/hdmr/cpp_util
