@@ -67,7 +67,7 @@ class AdaptiveSparseGrid {
 
 	//#AE add poly basis function
 	virtual double PolyBasis(double x, int i, int j);
-
+	virtual double PolyBasis_tz(double x, int i, int j);
 
 	virtual void   Refine( AdaptiveARRAY<int>*, AdaptiveARRAY<int>*);
 

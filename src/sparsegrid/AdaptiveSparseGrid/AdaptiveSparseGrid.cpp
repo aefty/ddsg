@@ -473,6 +473,33 @@ void AdaptiveSparseGrid::Refine(AdaptiveARRAY<int>* i, AdaptiveARRAY<int>* j) {
 
 				FindOrInsertActiveIndex(px, px1, px2);
 			}
+		} else if (gridType == 5) { // AE Polybase_tz
+
+			if ((*i)(d) == 1) {
+				(*px1)(d) = 1;
+				(*px2)(d) = 3;
+				FindOrInsertActiveIndex(px, px1, px2);
+
+				//!Special treatment. For the points in level two, there is only one son.
+
+			} else if ( (*i)(d) == 2 ) {
+
+				if ( (*j)(d) == 1 ) {
+					(*px1)(d) = 2;
+
+				} else {
+					(*px1)(d) = 4;
+				}
+
+				(*px2)(d) = (*px1)(d);
+				FindOrInsertActiveIndex(px, px1, px2);
+
+			} else {//!Generate neigborhood points
+				(*px1)(d) = 2 * ((*j)(d));
+				(*px2)(d) = 2 * (*j)(d) - 2;
+
+				FindOrInsertActiveIndex(px, px1, px2);
+			}
 		}
 	}
 }
@@ -636,14 +663,18 @@ double AdaptiveSparseGrid::IndextoCoordinate(int i, int j ) {
 			m = pow(2.0, i) + 1.0;
 			return (j - 1) / (m - 1.0);
 			break;
+
 		case 4:
 			m = pow(2.0, i) + 1;
 			return (j - 1) / (m - 1.0) ;
 			break;
 
+		case 5:
+			return (j - 1.0) / (m - 1);
+			break;
 		//#AE: throw error when grid type not defined
 		default:
-			cout << "!! gridtype not valid ( " << gridType << " ) !!" << endl;
+			cout << "1 !! gridtype not valid ( " << gridType << " ) !!" << endl;
 			exit(0);
 
 	}
@@ -688,10 +719,13 @@ double AdaptiveSparseGrid::BasisFunction(double x, int i, int j) {
 			return FlipUpBasis(x, i, j);
 			break;
 
-		case 4: // Basis
+		case 4: // Poly Basis
 			return PolyBasis(x, i, j);
 			break;
 
+		case 5: // Poly_tz Basis
+			return PolyBasis_tz(x, i, j);
+			break;
 
 		//#AE: throw error when grid type not defined
 		default:
@@ -756,7 +790,44 @@ double AdaptiveSparseGrid::PolyBasis(double x, int i, int j) {
 		}
 	}
 }
+/**
+ * #AE
+ * Polynomial  Function
+ * @param  x [X val]
+ * @param  i [Level Depth]
+ * @param  j [Basis Function Index]
+ * @return   [Value]
+ */
+double AdaptiveSparseGrid::PolyBasis_tz(double x, int i, int j) {
 
+	if (i < 3) {
+		return LinearBasis(x, i, j);
+	} else {
+
+		double m = pow(2.0, (i - 1));
+		double xp = IndextoCoordinate(i, j);
+
+
+		// Wings
+		//	if ( x <= (1.0 / m) && xp == 1. / m)  {
+		//		return (-1.0 * m * x + 2.0);
+		//	} else if ( x >= (1.0 - 1.0 / m )  && xp == (1.0 - 1. / m) )  {
+		//		return (1.0 * m * x + (2.0 - m));
+		//	} else {
+
+		// Body
+		double x1 = xp - 1.0 / m;
+		double x2 = xp + 1.0 / m;
+		double temp = (x - x1) * (x - x2) / ((xp - x1) * (xp - x2));
+
+		if (temp > 0.0) {
+			return temp;
+		} else {
+			return 0.0;
+		}
+		//	}
+	}
+}
 
 /**
  * #AE
@@ -891,6 +962,20 @@ void  AdaptiveSparseGrid::SpIntegrate(double* value) {
 			}
 		}
 	} else if ( gridType == 4) { // QuadPOly
+		for (it1 = SparseGrid.rbegin(); it1 != SparseGrid.rend(); ++it1) {
+			mul = 1.0;
+
+			for ( int j = 1; j <= dim; j++) {
+				mul *= LinearBasisVolumeIntegral((*(*it1)->index)(j));
+			}
+
+			for (it2 = (*it1)->NodeData.begin(); it2 != (*it1)->NodeData.end(); ++it2) {
+				for ( int i = 0; i < TotalDof; i++) {
+					local_stat[i] +=  mul * (((*it2)->surplus)[i]);
+				}
+			}
+		}
+	} else if ( gridType == 5) { // QuadPOly_tz
 		for (it1 = SparseGrid.rbegin(); it1 != SparseGrid.rend(); ++it1) {
 			mul = 1.0;
 

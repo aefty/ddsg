@@ -67,9 +67,14 @@ double Post::IndextoCoordinate(int i, int j ) {
 			m = pow(2.0, i) + 1.0;
 			return (j - 1) / (m - 1.0);
 			break;
+
 		case 4:
 			m = pow(2.0, i) + 1;
 			return (j - 1) / (m - 1.0) ;
+			break;
+
+		case 5:
+			return (j - 1.0) / (m - 1);
 			break;
 
 		//#AE: throw error when grid type not defined
@@ -95,6 +100,9 @@ double Post::BasisFunction(double x, int i, int j) {
 			break;
 		case 4: // Basis
 			return PolyBasis(x, i, j);
+			break;
+		case 5: // Basis
+			return PolyBasis_tz(x, i, j);
 			break;
 		//#AE: throw error when grid type not defined
 		default:
@@ -180,6 +188,45 @@ double Post::PolyBasis(double x, int i, int j) {
 				return 0.0;
 			}
 		}
+	}
+}
+
+
+/**
+ * #AE
+ * Polynomial  Function
+ * @param  x [X val]
+ * @param  i [Level Depth]
+ * @param  j [Basis Function Index]
+ * @return   [Value]
+ */
+double Post::PolyBasis_tz(double x, int i, int j) {
+
+	if (i < 3) {
+		return LinearBasis(x, i, j);
+	} else {
+
+		double m = pow(2.0, i - 1);
+		double xp = IndextoCoordinate(i, j);
+
+		// Wings
+		//	if ( x <= (1.0 / m) && xp == 1. / m)  {
+		//		return (-1.0 * m * x + 2.0);
+		//	} else if ( x >= (1.0 - 1.0 / m )  && xp == (1.0 - 1. / m) )  {
+		//		return (1.0 * m * x + (2.0 - m));
+		//	} else {
+
+		// Body
+		double x1 = xp - 1.0 / m;
+		double x2 = xp + 1.0 / m;
+		double temp = (x - x1) * (x - x2) / ((xp - x1) * (xp - x2));
+
+		if (temp > 0.0) {
+			return temp;
+		} else {
+			return 0.0;
+		}
+		//}
 	}
 }
 

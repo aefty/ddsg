@@ -1,6 +1,5 @@
 #include "SGwrite.h"
 #include <stdio.h>
-#include <array>
 #include <string>
 #include <cstring>
 #include <algorithm>
@@ -50,7 +49,7 @@ void SGwrite::clear() {
 	Cleanup();
 }
 
-// #AE
+
 void SGwrite::resetMPI(MPI_Comm mpiCOMM_) {
 
 	mpiCOMM = mpiCOMM_;
@@ -67,11 +66,11 @@ void SGwrite::setAnchor(vector<double>& xBar_) {
 
 void SGwrite::build(vector<int>& activeDim_) {
 
-	// copy active Dimentions and xBar
+	// copy active Dimensions and xBar
 	activeDim.resize(activeDim_.size());
 	activeDim = activeDim_;
 
-	// Initilize masked x value
+	// Initialize masked x value
 	maskedX.resize(xBar.size());
 
 	build();
@@ -135,7 +134,6 @@ int SGwrite::write(string surplusFileName) {
 	return NumberOfPoints();
 }
 void SGwrite::integrateDomain(double* fvalue) {
-
 	SpIntegrate( &fvalue[0]);
 }
 
@@ -144,44 +142,10 @@ void SGwrite::EvaluateFunctionAtThisPoint( AdaptiveARRAY<double>* x ) {
 	// Copy points to masked value
 	maskedX = xBar;
 
-	/*
-		cout << "xBar : ";
-		for (int i = 0; i < maskedX.size(); ++i) {
-			cout << maskedX[i] << " ";
-		}
-		cout << endl;
-
-
-
-
-		cout << "activeDim : ";
-		for (int i = 0; i < activeDim.size(); ++i) {
-			cout << activeDim[i] << " ";
-		}
-		cout << endl;
-
-
-
-
-		cout << "Input : ";
-		for (int i = 0; i < dim; ++i) {
-			cout << x->pData[i] << " ";
-		}
-		cout << endl;
-	*/
-
 	// apply the mask
 	for (int i = 0; i < activeDim.size(); ++i) {
 		maskedX[activeDim[i]] = x->pData[i];
 	}
-
-	/*
-		cout << "maskedX : ";
-		for (int i = 0; i < maskedX.size(); ++i) {
-			cout << maskedX[i] << " ";
-		}
-		cout << endl << endl;
-	*/
 
 	problem(&maskedX[0], xBar.size(), surplus);
 }
