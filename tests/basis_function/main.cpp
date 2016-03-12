@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
 
 	// Step size for plot density
 	double x, xp;
-	double n = 5;
+	double n = 1;
 	double h;
 
 	// Set variables
@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
 		return 0;
 	}
 
-	h = pow(2, -n);
+	h = pow(2, -SGmaxLevel) / n;
 
 
 
@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
 
 	level++;
 
-	if (SGgridType == 1 || SGgridType == 4 ) {
+	if (SGgridType == 1 || SGgridType == 5 ) {
 		int l = level;
 		cout << "=================================================" << endl;
 		cout << "Level: " << 2 << " [index|NodalPoint|x]" << endl;
@@ -129,7 +129,7 @@ int main(int argc, char* argv[]) {
 			while (x <= 1.0 ) {
 				val = sgwrite->BasisFunction(x, l, j);
 
-				if (val > 0 ) {
+				if (val > 0) {
 					cout <<  j << "|" << xp << "|" << x << " ";
 					for (double i = 0; i < val; i += 0.05) {
 						cout << ".";

@@ -33,7 +33,7 @@ using std::fill;
 using namespace cpp_util;
 
 /*
- * Constructur, Destructor and clear
+ * Constructor, Destructor and clear
 */
 HDMR::HDMR(int verbose_) {
 	runTime.verbose = verbose_;
@@ -1011,7 +1011,7 @@ void HDMR::setComputePool() {
 		computePool.processPerNode = computePool.gsize;
 
 	} else if (runTime.mode == "SG_READ") {
-		// Mutiple nodes with processPerNode=1
+		// Multiple nodes with processPerNode=1
 
 		MPI_Comm_size(MPI_COMM_WORLD, &computePool.gsize);
 		MPI_Comm_rank(MPI_COMM_WORLD, &computePool.grank);

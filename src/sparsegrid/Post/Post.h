@@ -36,6 +36,7 @@ class Post {
   virtual double FlipUpBasis(double x, int i, int j);
   //#AE: QuadPoly
   virtual double PolyBasis(double x, int i, int j);
+  virtual double PolyBasis_tz(double x, int i, int j);
 
 
   virtual double LinearBasisVolumeIntegral(int level);
