@@ -10,7 +10,5 @@ HDMRmaxOrder=4
 HDMRcutOff=0.1
 
 echo 'mpirun -n' 4 './main' $METHOD $PROCESSPERGROUP $DIM $SGLEVEL $GRIDTYPE $HDMRmaxOrder $HDMRcutOff
-#make clean
-#make
 
 mpirun -n 4 ./main $METHOD $PROCESSPERGROUP $DIM $SGLEVEL $GRIDTYPE $HDMRmaxOrder $HDMRcutOff
