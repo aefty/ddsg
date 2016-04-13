@@ -37,20 +37,10 @@ int SGread::read(string surplusFileName) {
 }
 
 
-void SGread::interpolateValue(double* x, double* fvalue, double op) {
-
-	if (op == 0.0) {// Write over value
-		Interpolate(x, fvalue);
-	} else { // Add or Subtract value base don op
-		double tempFval[TotalDof];
-		Interpolate(x, tempFval);
-
-		for (int i = 0; i < TotalDof; ++i) {
-			fvalue[i] += tempFval[i] * op;
-		}
-	}
+void SGread::interpolateValue(double* x, double* fvalue) {
+	Interpolate(x, fvalue);
 }
 
-void SGread::integrateDomain(double* fvalue, double op) {
-	Integrate( &fvalue[0]);
+void SGread::integrateDomain(double* fvalue) {
+	Integrate(fvalue);
 }

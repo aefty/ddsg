@@ -68,15 +68,7 @@ class HDMR {
 		vector <vector<vector<int>>> active;
 		int active_size = 0;
 		vector <list<vector<int>>> full;
-
 	} job;
-
-	struct Cache {
-		map <vector<int> , vector<double>> fcomFun;
-		map <vector<int> , vector<double>> fval;
-		map <vector<int> , vector<double>> icomFun;
-		map <vector<int> , vector<double>> ival;
-	} cache;
 
 	struct RunTime {
 		int verbose = 0;
@@ -134,9 +126,6 @@ class HDMR {
 	int setActiveJobs_noAdaptivity();
 	int setActiveJobs_integralAdaptivty();
 	void removeDimFromJobs(vector<int>& activeDim, int d_start);
-
-	void resetCache();
-	void setCacheFval(double* x);
 
 	void setComputePool();
 

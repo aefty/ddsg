@@ -16,8 +16,8 @@ class SGread: public Post {
 
   int read(string surplusFileName);
 
-  void interpolateValue(double* x, double* fvalue, double op = 0.0);
-  void integrateDomain(double* value, double op = 0.0);
+  void interpolateValue(double* x, double* fvalue);
+  void integrateDomain(double* value);
 
   void resetMPI(MPI_Comm mpiCOMM_);
 

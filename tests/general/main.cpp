@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
 
 	if (method == "sg") {
 
-		hdmr->write(f4, dim, dof, SGmaxLevel, SGcutOff, SGgridType);
+		hdmr->write(f4_2, dim, dof, SGmaxLevel, SGcutOff, SGgridType);
 		hdmr->debug("SG.WRITE", 0, 1, 1, 1, 1, 0);
 
 		hdmr->read("surplusSG/");
@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
 		hdmr->interpolate(x, fval, numberOfpoints);
 		hdmr->debug("SG.INTERPOLATE");
 	} else if (method == "hdmr") {
-		hdmr->write(f4, dim, dof, SGmaxLevel, SGcutOff, SGgridType, HDMRmaxOrder, HDMRcutOff, xBar, processPerGroup);
+		hdmr->write(f4_2, dim, dof, SGmaxLevel, SGcutOff, SGgridType, HDMRmaxOrder, HDMRcutOff, xBar, processPerGroup);
 		hdmr->debug("HDMR.WRITE", 0, 1, 0, 0, 1, 1);
 
 		hdmr->read("surplusHDMR/");
@@ -78,7 +78,7 @@ int main(int argc, char* argv[]) {
 
 
 	if (rank == 0) {
-		double error =  checkError(f4, x, dim, fval, dof, numberOfpoints, 0);
+		double error =  checkError(f4_2, x, dim, fval, dof, numberOfpoints, 0);
 		cout << "Total Percentage Error Avg : " << error << endl;
 	}
 

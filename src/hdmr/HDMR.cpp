@@ -60,14 +60,6 @@ void HDMR::clear() {
 	computePool = {};
 	job = {};
 	runTime = {};
-
-	resetCache();
-}
-void HDMR::resetCache() {
-	cache.fval.clear();
-	cache.fcomFun.clear();
-	cache.ival.clear();
-	cache.icomFun.clear();
 }
 
 
@@ -144,7 +136,7 @@ int HDMR::write( //  For HDMR
 		command = "rm -rf " + folderName + " > nul 2>&1"; // Supress ouput
 		system(command.c_str());
 
-		command = "mkdir " + folderName + " > nul 2>&1"; // Supress ouput
+		command = "mkdir -p " + folderName + " > nul 2>&1"; // Supress ouput
 		system(command.c_str());
 	}
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -166,10 +158,6 @@ int HDMR::write( //  For HDMR
 		runTime.interpolationPoints = setActiveJobs_integralAdaptivty();
 	}
 
-	// Write index and log file
-	writeIndexFile();
-
-
 	// Delete all instance of sgwrite
 	MPI_Barrier(MPI_COMM_WORLD);
 
@@ -179,9 +167,11 @@ int HDMR::write( //  For HDMR
 	}
 	delete[] sgwrite;
 
-
 	// End timer
 	endTimer();
+
+	// Write index and log file
+	writeIndexFile();
 
 	return runTime.interpolationPoints;
 }
@@ -228,7 +218,7 @@ int HDMR::write( // For SG
 		command = "rm -rf " + folderName + " > nul 2>&1"; // Supress ouput
 		system(command.c_str());
 
-		command = "mkdir " + folderName + " > nul 2>&1"; // Supress ouput
+		command = "mkdir -p " + folderName + " > nul 2>&1"; // Supress ouput
 		system(command.c_str());
 	}
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -240,15 +230,15 @@ int HDMR::write( // For SG
 	sgwrite[0]->build();
 	runTime.interpolationPoints = sgwrite[0]->write(folderName + "surplus.data");
 
-	// Write index and log file
-	writeIndexFile();
-
 	// Delete single instance of sgwrite
 	MPI_Barrier(MPI_COMM_WORLD);
 	delete sgwrite[0];
 
 	// End timer
 	endTimer();
+
+	// Write index and log file
+	writeIndexFile();
 
 	return runTime.interpolationPoints;
 }
@@ -321,7 +311,6 @@ int HDMR::read(string folderName_) {
 	// End timer
 	endTimer();
 
-	MPI_Barrier(MPI_COMM_WORLD);
 	return runTime.interpolationPoints;
 }
 
@@ -343,7 +332,6 @@ void HDMR::interpolate(double* xSet, double* valSet , int pointCount) {
 
 	// Force all valSet to equal zero
 	fill(valSet, valSet + probParam.dof * pointCount, 0.0);
-	MPI_Barrier(MPI_COMM_WORLD);
 
 	// Call different interoplation function based on curret runtime mode
 	if (runTime.mode == "SG_READ") {
@@ -356,91 +344,109 @@ void HDMR::interpolate(double* xSet, double* valSet , int pointCount) {
 
 	// End timer
 	endTimer();
-	MPI_Barrier(MPI_COMM_WORLD);
 }
 void HDMR::interpolate_SG(double* xSet, double* valSet , int pointCount) {
 
-	// Cycle through each point
 	int xShift, valShift;
+
+	// Cycle through each point
 	for (int i = 0; i < pointCount; ++i) {
-
-		// round robin style task allocation
-		if (i % computePool.nodeSize ==  computePool.nodeRank) {
-			xShift = i * probParam.dim;
-			valShift = i * probParam.dof;
-			sgread[0]->interpolateValue(&xSet[xShift], &valSet[valShift]);
-		}
+		xShift = i * probParam.dim;
+		valShift = i * probParam.dof;
+		sgread[0]->interpolateValue(&xSet[xShift], &valSet[valShift]);
 	}
-
-	// Reduce in place all tasks
-	MPI_Allreduce(MPI_IN_PLACE, &valSet[0], probParam.dof * pointCount, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 }
 void HDMR::interpolate_HDMR(double* xSet, double* valSet , int pointCount) {
 
+	// Define Cache
+	map <vector<int> , vector<double>> fcomFun;
+	map <vector<int> , vector<double>> fval;
+
+	// General Variables
 	int xShift, valShift;
 	vector<int> alphabet;
 	vector<int> sub_alphabet;
 
-	resetCache();
-
 	// Cycle through each point
 	for (int r = 0; r < pointCount; ++r) {
 
-		if (r % computePool.nodeSize ==  computePool.nodeRank) {
+		//Reset cache to zero
+		fval.clear();
+		fcomFun.clear();
 
-			// Set shifting constants
-			xShift = r * probParam.dim;
-			valShift = r * probParam.dof;
+		// Set shifting constants
+		xShift = r * probParam.dim;
+		valShift = r * probParam.dof;
 
-			// Add the final -f_0 for at the start;
-			linalg_add(&valSet[valShift], hdmrParam.fxBar);
+		// Add the final HDMR Order, f_0 for at the start;
+		linalg_add(&valSet[valShift], hdmrParam.fxBar);
 
-			// Allocate the cache.fval on current process
-			setCacheFval(&xSet[xShift]);
+		// Allocate the cache.fval
+		{
+			double* x  = &xSet[xShift];
+			int activeJobIndex;
+			vector<double> xPartial;
+			vector<double> fvalPartial(probParam.dof, 0.0);
 
-			// *** Kernel of the code!
-			// Calculate Component functions
+			// Initilize indexing and offset variables
+			activeJobIndex = 0;
 
-			// Cycel through jobs
-			for (int d = 1; d < job.active.size(); ++d) {
+			// Cycle through each order of the active job (zero order has already beed set to fval)
+			for (int d = 1; d <= hdmrParam.maxOrder ; ++d) {
 
-				alphabet.resize(d);
+				// Resize lower order input x
+				xPartial.resize(d);
+
+				// Cycle through job.active
 				for (int i = 0; i < job.active[d].size(); ++i) {
 
-					// Initilize alphabit at the activeJob and set the component function intial value
-					alphabet = job.active[d][i] ;
-					cache.fcomFun [ alphabet ] = cache.fval[job.active[d][i]];
-
-					// Generate all combinations of lower level combination of alphabit
-					for (int k = 1; k < d; ++k) {
-
-						// Intilize sub alphabet
-						sub_alphabet.resize(d - k);
-						sub_alphabet.assign(alphabet.begin(), alphabet.end() - k);
-
-						do {
-							// Subtract all lower combinations fval from
-							linalg_less(cache.fcomFun [ alphabet ], cache.fcomFun [ sub_alphabet ]);
-						} while (next_combination(alphabet.begin(), alphabet.end(), sub_alphabet.begin(), sub_alphabet.end()));
+					// Allocate lower order x based on the active index from active job list
+					for (int j = 0; j < d; ++j) {
+						xPartial[j] = x[job.active[d][i][j]];
 					}
-
-					linalg_less(cache.fcomFun [ alphabet ], hdmrParam.fxBar);
-				}
-			}
-
-			for (auto fcomFun : cache.fcomFun) {
-				for (int i = 0; i < fcomFun.second.size(); ++i) {
-					valSet[valShift + i] += fcomFun.second[i];
+					sgread[activeJobIndex]->interpolateValue(&xPartial[0], &fvalPartial[0]);
+					fval[job.active[d][i]] = fvalPartial;
+					activeJobIndex ++;
 				}
 			}
 		}
 
-		//Reset cache to zero
-		cache.fval.clear();
-		cache.fcomFun.clear();
-	}
+		// *** Kernel of the code!
+		// Calculate Component functions
 
-	MPI_Allreduce(MPI_IN_PLACE, valSet, pointCount * probParam.dof, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+		// Cycel through jobs
+		for (int d = 1; d < job.active.size(); ++d) {
+
+			alphabet.resize(d);
+			for (int i = 0; i < job.active[d].size(); ++i) {
+
+				// Initilize alphabit at the activeJob and set the component function intial value
+				alphabet = job.active[d][i] ;
+				fcomFun [ alphabet ] = fval[job.active[d][i]];
+
+				// Generate all combinations of lower level combination of alphabit
+				for (int k = 1; k < d; ++k) {
+
+					// Intilize sub alphabet
+					sub_alphabet.resize(d - k);
+					sub_alphabet.assign(alphabet.begin(), alphabet.end() - k);
+
+					do {
+						// Subtract all lower combinations fval from
+						linalg_less(fcomFun [ alphabet ], fcomFun [ sub_alphabet ]);
+					} while (next_combination(alphabet.begin(), alphabet.end(), sub_alphabet.begin(), sub_alphabet.end()));
+				}
+
+				linalg_less(fcomFun [ alphabet ], hdmrParam.fxBar);
+			}
+		}
+
+		for (auto fcomFun_set : fcomFun) {
+			for (int i = 0; i < fcomFun_set.second.size(); ++i) {
+				valSet[valShift + i] += fcomFun_set.second[i];
+			}
+		}
+	}
 }
 
 
@@ -722,6 +728,9 @@ int HDMR::setActiveJobs_noAdaptivity() {
 }
 int HDMR::setActiveJobs_integralAdaptivty() {
 
+	// Define cache container
+	map <vector<int> , vector<double>> icomFun;
+
 	// Generate lower dimension surplus files for all active Jobs
 	vector<int> activeDim;
 	vector<int> sub_activeDim;
@@ -813,7 +822,7 @@ int HDMR::setActiveJobs_integralAdaptivty() {
 						// Sum up all lower combinations of the icomFun
 						// Calculate : sum_{ all permutations of =u }(icomFun_u)
 						do {
-							linalg_add(sum_icomfun, cache.icomFun[sub_activeDim]);
+							linalg_add(sum_icomfun, icomFun[sub_activeDim]);
 						} while (next_combination(activeDim.begin(), activeDim.end(), sub_activeDim.begin(), sub_activeDim.end()));
 					}
 				}
@@ -826,23 +835,33 @@ int HDMR::setActiveJobs_integralAdaptivty() {
 
 				nu = linalg_l2(&mpiContainer_icomFun[i * probParam.dof], probParam.dof) / linalg_l2(sum_icomfun);
 
+
+				// For Testing
 				printd(activeDim, "activeDim");
 				printd(&ival[i * probParam.dof], probParam.dof, "ival");
 				printd(sum_icomfun, "sum_icomfun");
 				printd(&mpiContainer_icomFun[i * probParam.dof], probParam.dof, "icomFun");
-
 				printd(nu, "Nu");
+				//
+
+
 
 				// Add dimension index to reject list
 				if (nu < hdmrParam.cutOff) {
 					rejectDimIndex[i] = 1;
+
+					// For Testing
 					printd("Reject Dim !!!!!!!!!!");
+					//
 				}
 
 				// Write out surplus file only if its not a rejected dimension or if its first order
 				if (!rejectDimIndex[i] || d == 1 ) {
 					interpolationPoints += sgwrite[d - 1]->write(fileName);
+
+					// For Testing
 					printd("Accept Dim");
+					//
 				}
 
 				// clear object
@@ -860,12 +879,13 @@ int HDMR::setActiveJobs_integralAdaptivty() {
 
 		// Allocate the icomFun to all local cache
 		for (int i = 0; i < cadidateDim.size(); ++i) {
-			cache.icomFun[cadidateDim[i]].assign(&mpiContainer_icomFun[i * probParam.dof], &mpiContainer_icomFun[i * probParam.dof] + probParam.dof);
+			icomFun[cadidateDim[i]].assign(&mpiContainer_icomFun[i * probParam.dof], &mpiContainer_icomFun[i * probParam.dof] + probParam.dof);
 		}
 
-
+		// For Testing
 		printd(rejectDimIndex, "rejectDimIndex");
 		printd();
+		//
 
 		// Remove hdmr jobs that are not required
 		for (int i = 0; i < cadidateDim.size(); ++i) {
@@ -884,26 +904,34 @@ int HDMR::setActiveJobs_integralAdaptivty() {
 
 		// Initilize temp as zero and sum up all components
 		integral = hdmrParam.fxBar;
-		for (auto icomFun : cache.icomFun) {
-			linalg_add(integral, icomFun.second);
+		for (auto icomFun_set : icomFun) {
+			linalg_add(integral, icomFun_set.second);
 		}
 
+		// For Testing
 		if (computePool.grank == 0) {
 			printd(integral_last, "integral_last");
 			printd(integral, "integral");
 		}
+		//
 
 		rho = 1.0 / linalg_l2(integral_last);
 		linalg_less(integral_last, integral);
 
+
+		// For Testing
 		printd(integral_last, "-Diff");
+		//
 
 		rho *= linalg_l2(integral_last);
 
+
+		// For Testing
 		if (computePool.grank == 0) {
 			printd(rho, "RHO");
 			printd();
 		}
+		//
 
 		integral_last = integral;
 	}
@@ -959,34 +987,6 @@ void HDMR::removeDimFromJobs(vector<int>& activeDim, int d_start) {
 
 
 
-void HDMR::setCacheFval(double* x) {
-
-	int activeJobIndex;
-	vector<double> xPartial;
-	vector<double> fvalPartial(probParam.dof, 0.0);
-
-	// Initilize indexing and offset variables
-	activeJobIndex = 0;
-
-	// Cycle through each order of the active job (zero order has already beed set to fval)
-	for (int d = 1; d <= hdmrParam.maxOrder ; ++d) {
-
-		// Resize lower order input x
-		xPartial.resize(d);
-
-		// Cycle through job.active
-		for (int i = 0; i < job.active[d].size(); ++i) {
-
-			// Allocate lower order x based on the active index from active job list
-			for (int j = 0; j < d; ++j) {
-				xPartial[j] = x[job.active[d][i][j]];
-			}
-			sgread[activeJobIndex]->interpolateValue(&xPartial[0], &fvalPartial[0]);
-			cache.fval[job.active[d][i]] = fvalPartial;
-			activeJobIndex ++;
-		}
-	}
-}
 
 
 
@@ -1009,22 +1009,11 @@ void HDMR::setComputePool() {
 		computePool.nodeRank = 0;
 		computePool.nodeSize = 1;
 		computePool.processPerNode = computePool.gsize;
+		MPI_Barrier(MPI_COMM_WORLD);
 
 	} else if (runTime.mode == "SG_READ") {
-		// Multiple nodes with processPerNode=1
-
-		MPI_Comm_size(MPI_COMM_WORLD, &computePool.gsize);
-		MPI_Comm_rank(MPI_COMM_WORLD, &computePool.grank);
-
-		computePool.processPerNode = 1;
-		computePool.nodeSize = computePool.gsize / computePool.processPerNode ;
-
-		computePool.nodeRank = computePool.grank % computePool.nodeSize;
-
-		MPI_Comm_split(MPI_COMM_WORLD , computePool.nodeRank , computePool.grank , &computePool.subComm );
-
-		MPI_Comm_size(computePool.subComm , &computePool.size);
-		MPI_Comm_rank(computePool.subComm , &computePool.rank);
+		// Do Nothing!
+		// Every MPI process get the same thing!
 
 	} else if (runTime.mode == "HDMR_WRITE" ) {
 		// Multiple nodes with processPerNode defined by intput
@@ -1042,29 +1031,14 @@ void HDMR::setComputePool() {
 
 		MPI_Comm_size(computePool.subComm , &computePool.size);
 		MPI_Comm_rank(computePool.subComm , &computePool.rank);
-
+		MPI_Barrier(MPI_COMM_WORLD);
 	} else if (runTime.mode == "HDMR_READ") {
 
-		// Mutiple nodes with processPerNode=1
-
-		MPI_Comm_size(MPI_COMM_WORLD, &computePool.gsize);
-		MPI_Comm_rank(MPI_COMM_WORLD, &computePool.grank);
-
-		computePool.processPerNode = 1;
-		computePool.nodeSize = computePool.gsize / computePool.processPerNode ;
-
-		computePool.nodeRank = computePool.grank % computePool.nodeSize;
-
-		MPI_Comm_split(MPI_COMM_WORLD , computePool.nodeRank , computePool.grank , &computePool.subComm );
-
-		MPI_Comm_size(computePool.subComm , &computePool.size);
-		MPI_Comm_rank(computePool.subComm , &computePool.rank);
-
+		// Do Nothing!
+		// Every MPI process get the same thing!
 	} else {
 		err("ERROR In setComputePool(), runTime.mode not defined");
 	}
-
-	MPI_Barrier(MPI_COMM_WORLD);
 }
 
 
@@ -1087,11 +1061,14 @@ void HDMR::endTimer() {
 	runTime.maxTime = runTime.time ;
 	runTime.minTime = runTime.time ;
 
-	MPI_Allreduce(MPI_IN_PLACE, &runTime.avgTime, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-	runTime.avgTime = runTime.avgTime / computePool.gsize;
+	if (runTime.mode == "SG_WRITE" || runTime.mode == "HDMR_WRITE") {
 
-	MPI_Allreduce(MPI_IN_PLACE, &runTime.maxTime, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-	MPI_Allreduce(MPI_IN_PLACE, &runTime.minTime, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+		MPI_Allreduce(MPI_IN_PLACE, &runTime.avgTime, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+		runTime.avgTime = runTime.avgTime / computePool.gsize;
+
+		MPI_Allreduce(MPI_IN_PLACE, &runTime.maxTime, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+		MPI_Allreduce(MPI_IN_PLACE, &runTime.minTime, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+	}
 }
 
 
@@ -1105,34 +1082,14 @@ void HDMR::endTimer() {
 */
 void HDMR::debug( string heading, int rankToShow, int showRunTime, int showComputePool, int showProb, int showSG_HDMRparam, int showJob) {
 
-	if (computePool.grank == 0) {cout << hline;};
+	if (computePool.grank == 0) {
 
-	MPI_Barrier(MPI_COMM_WORLD);
+		cout << hline;
 
-	if (rankToShow == -1) {
-		sleep( (computePool.nodeRank * computePool.nodeSize + computePool.rank) / computePool.gsize);
-	} else {
-		if (computePool.grank != rankToShow) {
-			return;
-		}
-	}
+		cout << "\n " + heading + " - State Dump [ Global Rank: " << computePool.grank << " of " << computePool.gsize << " ]\n";
+		cout << "================================================\n";
 
-	cout << "\n " + heading + " - State Dump [ Global Rank: " << computePool.grank << " of " << computePool.gsize << " ]\n";
-	cout << "================================================\n";
-
-	if (showRunTime) {
-		if (showRunTime == 1) {
-			if (computePool.grank == 0) {
-				cout << "\n> RunTime Param\n";
-				cout << "  System Mode: " << runTime.mode << endl;
-				cout << "  Verbose: " << runTime.verbose << endl;
-				cout << "  Total Process Avg Time: " << runTime.avgTime << endl;
-				cout << "  Total Process Max Time: " << runTime.maxTime << endl;
-				cout << "  Total Process Min Time: " << runTime.minTime << endl;
-				cout << "  Total Interpolation Points: " << runTime.interpolationPoints << endl;
-				cout << "  HDMR L2 Convergence: " << l2convergence << endl;
-			}
-		} else {
+		if (showRunTime) {
 			cout << "\n> RunTime Param\n";
 			cout << "  System Mode: " << runTime.mode << endl;
 			cout << "  Verbose: " << runTime.verbose << endl;
@@ -1143,82 +1100,82 @@ void HDMR::debug( string heading, int rankToShow, int showRunTime, int showCompu
 			cout << "  Total Interpolation Points: " << runTime.interpolationPoints << endl;
 			cout << "  HDMR L2 Convergence: " << l2convergence << endl;
 		}
-	}
 
 
-	if (showComputePool) {
-		cout << "\n> Compute Pool\n";
-		cout << "  [group][local]: "
-		     << "[" << computePool.nodeRank << " of " << computePool.nodeSize << "] "
-		     << "[" << computePool.rank      << " of " << computePool.size      << "]" << endl;
-		cout << "  processPerNode: " << computePool.processPerNode << endl;
-	}
-
-	if (showProb && computePool.grank == 0) {
-		cout << "\n> Problem Param\n";
-		cout << "  Dim: " << probParam.dim << endl;
-		cout << "  DOF: " << probParam.dof << endl;
-	}
-
-	if (showSG_HDMRparam && computePool.grank == 0) {
-		cout << "\n> SG param\n";
-		cout << "  Lmax: " << sgParam.maxLevel << endl;
-		cout << "  Grid Type: " << sgParam.gridType << endl;
-		cout << "  CutOff/Epsilon: " << sgParam.cutOff << endl;
-
-
-		if (runTime.mode == "HDMR_WRITE" || runTime.mode == "HDMR_READ") {
-			cout << "\n> HDMR param\n";
-			cout << "  maxOrder: " << hdmrParam.maxOrder << endl;
-			cout << "  CutOff/Epsilon: " << hdmrParam.cutOff << endl;
-
-			cout << "\n> Xbar & F(Xbar)\n";
-			cout << "  Xbar : [ ";
-
-			for (int i = 0; i < hdmrParam.xBar.size(); ++i) {
-				cout << hdmrParam.xBar[i] << " ";
-			}
-			cout << "]" << endl;
-
-			cout << "  f(Xbar) : [ ";
-			for (int i = 0; i < hdmrParam.fxBar.size(); ++i) {
-				cout << hdmrParam.fxBar[i] << " ";
-			}
-			cout << "]" << endl;
+		if (showComputePool) {
+			cout << "\n> Compute Pool\n";
+			cout << "  [group][local]: "
+			     << "[" << computePool.nodeRank << " of " << computePool.nodeSize << "] "
+			     << "[" << computePool.rank      << " of " << computePool.size      << "]" << endl;
+			cout << "  processPerNode: " << computePool.processPerNode << endl;
 		}
-	}
 
-	if (showJob && computePool.grank == 0) {
+		if (showProb) {
+			cout << "\n> Problem Param\n";
+			cout << "  Dim: " << probParam.dim << endl;
+			cout << "  DOF: " << probParam.dof << endl;
+		}
 
-		cout << "\n> Job List\n";
-		if (showJob > 1) {
-			cout << "  Full List:\n";
-			for (int i = 0; i < job.all.size(); ++i) {
-				cout << "  [" << i << "][" << job.all[i].size() << "] ";
-				for (int j = 0; j < job.all[i].size(); ++j) {
-					for (int r = 0; r < job.all[i][j].size(); ++r) {
-						cout << job.all[i][j][r];
+		if (showSG_HDMRparam) {
+			cout << "\n> SG param\n";
+			cout << "  Lmax: " << sgParam.maxLevel << endl;
+			cout << "  Grid Type: " << sgParam.gridType << endl;
+			cout << "  CutOff/Epsilon: " << sgParam.cutOff << endl;
+
+
+			if (runTime.mode == "HDMR_WRITE" || runTime.mode == "HDMR_READ") {
+				cout << "\n> HDMR param\n";
+				cout << "  maxOrder: " << hdmrParam.maxOrder << endl;
+				cout << "  CutOff/Epsilon: " << hdmrParam.cutOff << endl;
+
+				cout << "\n> Xbar & F(Xbar)\n";
+				cout << "  Xbar : [ ";
+
+				for (int i = 0; i < hdmrParam.xBar.size(); ++i) {
+					cout << hdmrParam.xBar[i] << " ";
+				}
+				cout << "]" << endl;
+
+				cout << "  f(Xbar) : [ ";
+				for (int i = 0; i < hdmrParam.fxBar.size(); ++i) {
+					cout << hdmrParam.fxBar[i] << " ";
+				}
+				cout << "]" << endl;
+			}
+		}
+
+		if (showJob) {
+
+			cout << "\n> Job List\n";
+			if (showJob > 1) {
+				cout << "  Full List:\n";
+				for (int i = 0; i < job.all.size(); ++i) {
+					cout << "  [" << i << "][" << job.all[i].size() << "] ";
+					for (int j = 0; j < job.all[i].size(); ++j) {
+						for (int r = 0; r < job.all[i][j].size(); ++r) {
+							cout << job.all[i][j][r];
+						}
+						cout << " ";
+					}
+					cout << endl;
+				}
+				cout << endl;
+			}
+
+			cout << "  Active List:\n";
+			for (int i = 0; i < job.active.size(); ++i) {
+				cout << "  [" << i << "][" << job.active[i].size() << "] ";
+				for (int j = 0; j < job.active[i].size(); ++j) {
+					for (int r = 0; r < job.active[i][j].size(); ++r) {
+						cout << job.active[i][j][r];
 					}
 					cout << " ";
 				}
 				cout << endl;
 			}
-			cout << endl;
 		}
 
-		cout << "  Active List:\n";
-		for (int i = 0; i < job.active.size(); ++i) {
-			cout << "  [" << i << "][" << job.active[i].size() << "] ";
-			for (int j = 0; j < job.active[i].size(); ++j) {
-				for (int r = 0; r < job.active[i][j].size(); ++r) {
-					cout << job.active[i][j][r];
-				}
-				cout << " ";
-			}
-			cout << endl;
-		}
+		cout << hline;
 	}
-
-	if (computePool.grank == 0) {sleep(1); cout << hline;};
 }
 
