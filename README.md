@@ -1,2 +1,2 @@
-# hdmr
-HDMR + Sparse Grids
+# DDSG
+Dimensional Decomposition + Sparse Grids
